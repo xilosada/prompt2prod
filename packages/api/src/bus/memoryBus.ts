@@ -11,6 +11,7 @@ export function createMemoryBus(): Bus {
     },
 
     async subscribe(subject, handler) {
+      // memory driver ignores opts.queue; broadcasts to all subscribers (dev-only).
       const h = (p: any) => void Promise.resolve(handler(p, { subject })).catch(() => {});
       ee.on(subject, h);
       return async () => { ee.off(subject, h); };
@@ -27,6 +28,8 @@ export function createMemoryBus(): Bus {
       return result;
     },
 
-    async close() { /* no-op */ },
+    async close() {
+      ee.removeAllListeners();
+    },
   };
 } 

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { topics } from '../bus/topics.js';
 import { createMemoryBus } from '../bus/memoryBus.js';
 
-// Temporary in-memory singleton. In PR2.N (NATS) we'll replace this via DI/factory.
+// TODO: replace with DI/factory in PR2.2 (NATS)
 export const bus = createMemoryBus();
 
 export function registerSse(app: FastifyInstance) {
@@ -10,15 +10,18 @@ export function registerSse(app: FastifyInstance) {
     const runId = (req.params as any).id;
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     });
 
     const unsub = await bus.subscribe<string>(topics.runLogs(runId), (line) => {
       reply.raw.write(`data: ${JSON.stringify(line)}\n\n`);
     });
 
-    req.raw.on('close', () => { unsub(); });
+    const ping = setInterval(() => reply.raw.write(': ping\n\n'), 15000);
+    const cleanup = async () => { clearInterval(ping); await unsub(); };
+    req.raw.on('close', cleanup);
     reply.hijack();
   });
 
