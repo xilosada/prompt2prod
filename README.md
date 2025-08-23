@@ -5,19 +5,33 @@ TypeScript monorepo with Fastify API and shared packages.
 ## Quick Start
 
 ```bash
-pnpm i && pnpm -w build && pnpm --filter @prompt2prod/api dev
+# Install dependencies
+pnpm install
+
+# Start the development server
+pnpm dev
+
+# Or specify a custom port
+PORT=3000 pnpm dev
 ```
 
-This will:
-
-1. Install all dependencies
-2. Build all packages
-3. Start the API server on http://localhost:3000
+The API server will be available at `http://localhost:3000` (or your custom port).
 
 ## Development
 
-- `pnpm dev` - Start the API server
-- `pnpm build` - Build all packages
-- `pnpm test` - Run all tests
-- `pnpm lint` - Run ESLint
-- `pnpm format:check` - Check Prettier formatting
+```bash
+# Run tests
+pnpm test
+
+# Type check
+pnpm typecheck
+
+# Lint code
+pnpm lint
+
+# Check formatting
+pnpm format:check
+
+# Build all packages
+pnpm build
+```
