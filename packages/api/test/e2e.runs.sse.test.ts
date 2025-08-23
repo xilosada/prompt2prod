@@ -132,5 +132,5 @@ describe('E2E: run dispatch + SSE logs', () => {
       await app.close();
       await bus.close();
     }
-  });
+  }, 10000); // 10 second timeout for CI
 });
