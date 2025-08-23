@@ -158,6 +158,30 @@ await applyPatch(
 );
 ```
 
+#### Local Git Plumbing (internal)
+
+Child-process wrappers around system `git` for local repository operations:
+
+```ts
+import {
+  initBareRemote,
+  initWorkspace,
+  ensureBranch,
+  stageAll,
+  commit,
+  push,
+} from '@prompt2prod/api/src/git/local';
+
+const remoteUrl = await initBareRemote('/tmp/remote.git');
+await initWorkspace('/tmp/work', remoteUrl);
+await ensureBranch('/tmp/work', 'feat/patch');
+await stageAll('/tmp/work');
+const sha = await commit('/tmp/work', 'feat: add changes', { name: 'bot', email: 'bot@local' });
+await push('/tmp/work', 'feat/patch');
+```
+
+Supports bare remote creation, workspace initialization, branch management, staging, committing, and pushing to local file-based remotes.
+
 ```
 
 ```
