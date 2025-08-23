@@ -136,6 +136,28 @@ await applyPatch(
 
 Security: paths are validated; traversal is rejected. Deterministic ordering for reproducible builds.
 
+#### Patch Apply Engine — Production mode
+
+- **Ops**: supports `write`, `delete`, `rename` (back-compat: `{ files: [...] }`).
+- **Atomic**: writes use temp+rename by default (`atomic: true`).
+- **Dry-run**: set `dryRun: true` to get an auditable `plan` without touching disk.
+- **Per-file EOL**: override with `eol: 'lf' | 'crlf' | 'none'`; global default is `'lf'`.
+
+Example (ops):
+
+```ts
+await applyPatch(
+  {
+    ops: [
+      { kind: 'delete', path: 'old/file.txt' },
+      { kind: 'rename', from: 'docs/draft.md', to: 'docs/final.md' },
+      { kind: 'write', path: 'README.generated.md', content: '# Hello', eol: 'lf' },
+    ],
+  },
+  { rootDir: workdir, atomic: true, overwrite: true },
+);
+```
+
 ```
 
 ```
