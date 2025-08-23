@@ -42,9 +42,12 @@ jobs:
         run: |
           node packages/api/dist/index.js > api.log 2>&1 &
           echo $! > server.pid
-          # wait a moment for server to start
-          sleep 2
-          grep -q "listening on :3000" api.log || (echo "API did not start"; cat api.log; exit 1)
+          # wait up to ~10s for "listening on :3000"
+          for i in {1..20}; do
+            if grep -q "listening on :3000" api.log; then exit 0; fi
+            sleep 0.5
+          done
+          echo "API did not start"; tail -n +1 api.log; exit 1
 
       - name: Prepare bare remote
         run: |
@@ -66,12 +69,13 @@ jobs:
           JSON
           )
           BODY=${BODY/__REMOTE__/${RUNNER_TEMP//\//\\/}\/remote\/remote.git}
-          CODE=$(curl -s -o resp.json -w "%{http_code}" -X POST "http://localhost:3000/runs/${ID}/pr/compose" \
-            -H 'content-type: application/json' \
-            -d "$BODY")
+          for i in {1..5}; do
+            CODE=$(curl -sS -o resp.json -w "%{http_code}" \
+              -X POST "http://localhost:3000/runs/${ID}/pr/compose" \
+              -H 'content-type: application/json' -d "$BODY") && break || sleep 1
+          done
           echo "HTTP $CODE"
           cat resp.json
-          # assert 500 due to missing PAT (but git push should have succeeded)
           test "$CODE" -eq 500
           grep -q '"github_token_missing"' resp.json
 
@@ -87,8 +91,14 @@ jobs:
       - name: Stop API
         if: always()
         run: |
-          kill "$(cat server.pid)" 2>/dev/null || true
-          sleep 1
+          if [ -f server.pid ]; then kill "$(cat server.pid)" 2>/dev/null || true; fi
           pkill -f "packages/api/dist/index.js" || true
-          echo "----- api.log -----"
-          sed -n '1,200p' api.log || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-orchestrator-logs
+          path: |
+            api.log
+            resp.json
