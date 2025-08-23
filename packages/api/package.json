@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "fastify": "^4.27.0",
-    "nats": "^2.22.0"
+    "nats": "^2.22.0",
+    "octokit": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
