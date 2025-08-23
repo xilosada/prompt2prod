@@ -13,5 +13,9 @@ jobs:
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: pnpm install
-      - run: pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build 
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

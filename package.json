@@ -3,11 +3,33 @@
   "private": true,
   "packageManager": "pnpm@9",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xilosada/prompt2prod.git"
+  },
+  "homepage": "https://github.com/xilosada/prompt2prod#readme",
+  "bugs": {
+    "url": "https://github.com/xilosada/prompt2prod/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
-    "build": "echo ok",
-    "typecheck": "echo ok",
-    "test": "echo ok",
-    "lint": "echo ok",
-    "format:check": "echo ok"
+    "build": "pnpm -r --parallel build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "test": "pnpm -r --parallel test",
+    "lint": "eslint . --ext .ts",
+    "format:check": "prettier -c ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "prettier": "^3.3.0",
+    "vitest": "^2.0.0"
   }
-} 
+}
