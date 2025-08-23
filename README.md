@@ -200,6 +200,22 @@ curl -X POST http://localhost:3000/runs/<id>/pr \
 
 **Note:** For cross-repo PRs, the `head` parameter may need to be in `owner:branch` format (GitHub API nuance).
 
+### Compose: Apply Patch → Push Branch → Create GitHub PR
+
+```bash
+export GITHUB_TOKEN=ghp_***
+curl -X POST http://localhost:3000/runs/<id>/pr/compose \
+  -H 'content-type: application/json' \
+  -d '{
+    "repo":"org/repo",
+    "base":"main",
+    "head":"feat/run-<id>",
+    "title":"Automated PR",
+    "remoteUrl":"file:///tmp/remote.git",
+    "patch":{"files":[{"path":"README.generated.md","content":"# Hello"}]}
+  }'
+```
+
 ```
 
 ```
