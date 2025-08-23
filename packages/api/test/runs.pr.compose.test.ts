@@ -194,4 +194,115 @@ describe('POST /runs/:id/pr/compose', () => {
     const body = res.json() as { pr: { number: number; url: string } };
     expect(body.pr).toEqual({ number: 321, url: 'https://gh/pr/321' });
   });
+
+  it('returns 502 when Octokit PR creation fails', async () => {
+    const remoteUrl = await initBareRemote(bare);
+
+    // Initialize workspace and create initial commit
+    const work = path.join(tmp, 'work');
+    await initWorkspace(work, remoteUrl);
+    await applyPatch(
+      { files: [{ path: 'README.md', content: '# Initial\n' }] },
+      { rootDir: work, normalizeEol: 'lf' },
+    );
+    await stageAll(work);
+    await commit(work, 'Initial commit');
+    await push(work, 'main');
+
+    // Set up mocks to simulate Octokit failure
+    const { getOctokit, createPullRequest } = await import('../src/git/gh.js');
+    getOctokit.mockImplementation((token = process.env.GITHUB_TOKEN) => {
+      if (!token || token === '') throw new Error('github_token_missing');
+      return { rest: { pulls: { create: vi.fn() } } };
+    });
+    createPullRequest.mockRejectedValue(new Error('GitHub API error'));
+
+    const app = Fastify();
+    registerPrComposeRoutes(app);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/runs/error/pr/compose',
+      payload: {
+        repo: 'org/repo',
+        base: 'main',
+        title: 'Error PR',
+        remoteUrl,
+        patch: { files: [{ path: 'test.txt', content: 'test' }] },
+      },
+    });
+
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toEqual({ error: 'orchestrate_error' });
+  });
+
+  it('trims and validates user inputs', async () => {
+    const remoteUrl = await initBareRemote(bare);
+
+    // Initialize workspace and create initial commit
+    const work = path.join(tmp, 'work');
+    await initWorkspace(work, remoteUrl);
+    await applyPatch(
+      { files: [{ path: 'README.md', content: '# Initial\n' }] },
+      { rootDir: work, normalizeEol: 'lf' },
+    );
+    await stageAll(work);
+    await commit(work, 'Initial commit');
+    await push(work, 'main');
+
+    const app = Fastify();
+    registerPrComposeRoutes(app);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/runs/trim/pr/compose',
+      payload: {
+        repo: '  org/repo  ',
+        base: '  main  ',
+        head: '  feat/trimmed  ',
+        title: '  Trimmed Title  ',
+        remoteUrl,
+        patch: { files: [{ path: 'test.txt', content: 'test' }] },
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as { head: string };
+    expect(body.head).toBe('feat/trimmed'); // Should use trimmed head
+  });
+
+  it('falls back to default branch name when head has spaces', async () => {
+    const remoteUrl = await initBareRemote(bare);
+
+    // Initialize workspace and create initial commit
+    const work = path.join(tmp, 'work');
+    await initWorkspace(work, remoteUrl);
+    await applyPatch(
+      { files: [{ path: 'README.md', content: '# Initial\n' }] },
+      { rootDir: work, normalizeEol: 'lf' },
+    );
+    await stageAll(work);
+    await commit(work, 'Initial commit');
+    await push(work, 'main');
+
+    const app = Fastify();
+    registerPrComposeRoutes(app);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/runs/invalid/pr/compose',
+      payload: {
+        repo: 'org/repo',
+        base: 'main',
+        head: 'invalid branch name',
+        title: 'Invalid Branch Test',
+        remoteUrl,
+        patch: { files: [{ path: 'test.txt', content: 'test' }] },
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as { head: string };
+    expect(body.head).toBe('feat/run-invalid'); // Should use default
+  });
 });

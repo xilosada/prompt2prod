@@ -108,13 +108,24 @@ export function registerPrComposeRoutes(app: FastifyInstance) {
         remoteUrl: string;
         patch: Patch;
       };
+
+      // Trim and normalize user inputs
+      const trimmedRepo = repo.trim();
+      const trimmedBase = base.trim();
+      const trimmedTitle = title.trim();
+      const trimmedHead = head?.trim();
+
+      // Validate branch name if provided
+      const finalHead =
+        trimmedHead && trimmedHead.length > 0 && !/\s/.test(trimmedHead) ? trimmedHead : undefined; // Will use default in orchestrator
+
       try {
         const res = await orchestrateRunToPr({
           runId: id,
-          repo,
-          base,
-          head,
-          title,
+          repo: trimmedRepo,
+          base: trimmedBase,
+          head: finalHead,
+          title: trimmedTitle,
           body,
           draft,
           remoteUrl,
