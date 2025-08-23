@@ -22,7 +22,8 @@
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r --parallel test",
     "lint": "eslint . --ext .ts",
-    "format:check": "prettier -c ."
+    "format:check": "prettier -c .",
+    "dev": "pnpm --filter @prompt2prod/api dev"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
