@@ -26,11 +26,6 @@ jobs:
         image: nats:2.10
         ports:
           - 4222:4222
-        options: >-
-          --health-cmd "sh -c 'exec 3<>/dev/tcp/127.0.0.1/4222'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     env:
       BUS_DRIVER: nats
       NATS_URL: nats://localhost:4222
@@ -43,4 +38,9 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
+      - name: Wait for NATS to be ready
+        run: |
+          echo "Waiting for NATS to be ready..."
+          timeout 30s bash -c 'until nc -z localhost 4222; do sleep 1; done'
+          echo "NATS is ready!"
       - run: pnpm check
