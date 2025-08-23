@@ -9,9 +9,13 @@ export function createMemoryTransport(): Transport {
     async publish(subject, payload) {
       queueMicrotask(() => ee.emit(subject, payload));
     },
-    async subscribe(subject, handler) {
+    async subscribe<T>(
+      subject: string,
+      handler: (m: T) => Promise<void> | void,
+      _opts?: { queue?: string }, // eslint-disable-line @typescript-eslint/no-unused-vars
+    ) {
       const h = (p: unknown) => {
-        void Promise.resolve(handler(p as never)).catch(() => {});
+        void Promise.resolve(handler(p as T)).catch(() => {});
       };
       ee.on(subject, h);
       return async () => ee.off(subject, h);
@@ -31,7 +35,7 @@ export function createMemoryTransport(): Transport {
         };
         ee.on(reply, once);
       });
-      ee.emit(subject, { data, reply });
+      queueMicrotask(() => ee.emit(subject, { data, reply }));
       return p;
     },
     async close() {
