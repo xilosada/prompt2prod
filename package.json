@@ -3,6 +3,19 @@
   "private": true,
   "packageManager": "pnpm@9",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xilosada/prompt2prod.git"
+  },
+  "homepage": "https://github.com/xilosada/prompt2prod#readme",
+  "bugs": {
+    "url": "https://github.com/xilosada/prompt2prod/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
     "build": "echo ok",
     "typecheck": "echo ok",
