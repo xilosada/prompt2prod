@@ -1,11 +1,10 @@
-import { AgentClient } from '@prompt2prod/sdk-agent-node';
+import { AgentClient } from '../../../packages/sdk-agent-node/dist/index.js';
+import { createMemoryTransport } from '../../../packages/sdk-agent-node/dist/transports/memory.js';
 
 async function main() {
   const agent = new AgentClient({
     agentId: process.env.AGENT_ID ?? 'mock-1',
-    transport: (
-      await import('@prompt2prod/sdk-agent-node/src/transports/memory.js')
-    ).createMemoryTransport(),
+    transport: createMemoryTransport(),
   });
   const hb = agent.heartbeat(5000);
 
