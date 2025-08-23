@@ -13,6 +13,8 @@ export function registerSse(app: FastifyInstance, bus: Bus) {
       'X-Accel-Buffering': 'no',
     });
 
+    reply.raw.write(': connected\n\n');
+
     const unsub = await bus.subscribe<string>(topics.runLogs(runId), (line) => {
       reply.raw.write(`data: ${JSON.stringify(line)}\n\n`);
     });
