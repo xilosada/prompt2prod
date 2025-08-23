@@ -43,6 +43,42 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
         payload: body.payload,
       });
 
+      // --- Attach per-run watchers ---
+      let logsUnsub: (() => void) | null = null;
+      let statusUnsub: (() => void) | null = null;
+      const cleanup = async () => {
+        try {
+          logsUnsub?.();
+        } catch {
+          /* ignore */
+        }
+        try {
+          statusUnsub?.();
+        } catch {
+          /* ignore */
+        }
+        logsUnsub = statusUnsub = null;
+      };
+
+      // 1) mark 'running' on first log
+      logsUnsub = await deps.bus.subscribe<string>(topics.runLogs(id), async () => {
+        deps.repo.setStatus(id, 'running');
+        const toClose = logsUnsub;
+        logsUnsub = null;
+        await toClose?.();
+      });
+
+      // 2) terminal statuses via runs.<id>.status
+      statusUnsub = await deps.bus.subscribe<{
+        state: 'done' | 'error' | 'canceled';
+        detail?: unknown;
+      }>(topics.runStatus(id), async (msg) => {
+        if (msg?.state === 'done' || msg?.state === 'error' || msg?.state === 'canceled') {
+          deps.repo.setStatus(id, msg.state);
+          await cleanup();
+        }
+      });
+
       try {
         // publish work item to agent queue
         await deps.bus.publish(topics.agentWork(body.agentId), {
@@ -57,6 +93,7 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
       } catch {
         deps.repo.setStatus(id, 'error');
         reply.code(503).send({ error: 'dispatch_failed', id });
+        await cleanup();
       }
     },
   );
