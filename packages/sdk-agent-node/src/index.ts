@@ -80,3 +80,7 @@ export class AgentClient {
 // Export transport types for external use
 export type { Transport };
 export { topics };
+
+// Re-export transport factories for convenience
+export { createMemoryTransport } from './transports/memory.js';
+export { createNatsTransport } from './transports/nats.js';

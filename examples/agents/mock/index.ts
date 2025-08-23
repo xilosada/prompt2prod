@@ -1,5 +1,4 @@
-import { AgentClient } from '../../../packages/sdk-agent-node/dist/index.js';
-import { createMemoryTransport } from '../../../packages/sdk-agent-node/dist/transports/memory.js';
+import { AgentClient, createMemoryTransport } from '../../../packages/sdk-agent-node/dist/index.js';
 
 async function main() {
   const agent = new AgentClient({

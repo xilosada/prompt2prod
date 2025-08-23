@@ -17,8 +17,8 @@ export async function createNatsTransport(
 
   return {
     async publish(subject, payload) {
-      const h = nats.headers();
-      nc.publish(subject, sc.encode(JSON.stringify(payload)), { headers: h });
+      // TODO: Add metadata headers when needed (e.g., timestamp, source, etc.)
+      nc.publish(subject, sc.encode(JSON.stringify(payload)));
     },
     async subscribe(subject, handler, subOpts) {
       const sub = nc.subscribe(subject, { queue: subOpts?.queue });
