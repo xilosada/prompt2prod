@@ -3,6 +3,7 @@ import { registerSse } from './server/sse.js';
 import { createBus } from './bus/factory.js';
 import { registerRunRoutes } from './runs/routes.js';
 import { registerPrRoutes } from './runs/pr.routes.js';
+import { registerPrComposeRoutes } from './runs/pr.compose.routes.js';
 import { createMemoryRunsRepo } from './runs/repo.memory.js';
 
 export function buildServer() {
@@ -16,6 +17,7 @@ export function buildServer() {
     registerSse(app, bus);
     registerRunRoutes(app, { bus, repo });
     registerPrRoutes(app);
+    registerPrComposeRoutes(app);
   });
 
   return app;
