@@ -1,0 +1,13 @@
+{
+  "name": "prompt2prod",
+  "private": true,
+  "packageManager": "pnpm@9",
+  "type": "module",
+  "scripts": {
+    "build": "echo ok",
+    "typecheck": "echo ok",
+    "test": "echo ok",
+    "lint": "echo ok",
+    "format:check": "echo ok"
+  }
+} 
