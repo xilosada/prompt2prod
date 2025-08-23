@@ -1,0 +1,104 @@
+name: e2e-orchestrator
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/api/**'
+      - '.github/workflows/e2e-orchestrator.yml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  orchestrator-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace
+        run: pnpm -w build
+
+      - name: Start API (background)
+        run: |
+          node packages/api/dist/index.js > api.log 2>&1 &
+          echo $! > server.pid
+          # wait up to ~10s for "listening on :3000"
+          for i in {1..20}; do
+            if grep -q "listening on :3000" api.log; then exit 0; fi
+            sleep 0.5
+          done
+          echo "API did not start"; tail -n +1 api.log; exit 1
+
+      - name: Prepare bare remote
+        run: |
+          mkdir -p "$RUNNER_TEMP/remote"
+          git init --bare "$RUNNER_TEMP/remote/remote.git"
+
+      - name: Compose (no PAT) — expect 500 github_token_missing
+        run: |
+          set -e
+          ID="ci"
+          BODY=$(cat <<'JSON'
+          {
+            "repo": "org/repo",
+            "base": "main",
+            "title": "ci e2e",
+            "remoteUrl": "file://__REMOTE__",
+            "patch": { "files": [ { "path": "x.txt", "content": "y" } ] }
+          }
+          JSON
+          )
+          BODY=${BODY/__REMOTE__/${RUNNER_TEMP//\//\\/}\/remote\/remote.git}
+          for i in {1..5}; do
+            CODE=$(curl -sS -o resp.json -w "%{http_code}" \
+              -X POST "http://localhost:3000/runs/${ID}/pr/compose" \
+              -H 'content-type: application/json' -d "$BODY") && break || sleep 1
+          done
+          echo "HTTP $CODE"
+          cat resp.json
+          test "$CODE" -eq 500
+          grep -q '"github_token_missing"' resp.json
+
+      - name: Verify branch and file in bare remote
+        run: |
+          set -e
+          GIT_DIR="$RUNNER_TEMP/remote/remote.git"
+          # default head is feat/run-<id>
+          BR="refs/heads/feat/run-ci"
+          git --git-dir="$GIT_DIR" rev-parse --verify "$BR"
+          git --git-dir="$GIT_DIR" ls-tree --name-only "$BR" | grep -q "^x.txt$"
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill "$(cat server.pid)" 2>/dev/null || true; fi
+          pkill -f "packages/api/dist/index.js" || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-orchestrator-logs
+          path: |
+            api.log
+            resp.json
