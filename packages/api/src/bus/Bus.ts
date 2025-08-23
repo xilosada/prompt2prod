@@ -6,8 +6,8 @@ export interface Bus {
   subscribe<T>(
     subject: string,
     handler: (msg: T, meta: { subject: string }) => Promise<void> | void,
-    opts?: SubOpts
+    opts?: SubOpts,
   ): Promise<() => void>;
   request<TReq, TRes>(subject: string, data: TReq, timeoutMs: number): Promise<TRes>;
   close(): Promise<void>;
-} 
+}

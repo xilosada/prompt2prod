@@ -4,4 +4,4 @@ export const topics = {
   agentWork: (agentId: string) => `agents.${agentId}.work`,
   runControl: (runId: string) => `runs.${runId}.control`,
   agentHeartbeat: (agentId: string) => `agents.${agentId}.heartbeat`,
-}; 
+};

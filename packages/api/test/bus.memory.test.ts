@@ -6,9 +6,11 @@ describe('memory bus', () => {
   it('publish/subscribe delivers once', async () => {
     const bus = createMemoryBus();
     const got: string[] = [];
-    const unsub = await bus.subscribe<string>('foo', (m) => { got.push(m); });
+    const unsub = await bus.subscribe<string>('foo', (m) => {
+      got.push(m);
+    });
     await bus.publish('foo', 'bar');
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
     expect(got).toEqual(['bar']);
     await unsub();
     await bus.close();
@@ -33,16 +35,20 @@ describe('memory bus', () => {
     const bus = createMemoryBus();
     const got1: string[] = [];
     const got2: string[] = [];
-    
-    const unsub1 = await bus.subscribe<string>('broadcast', (m) => { got1.push(m); });
-    const unsub2 = await bus.subscribe<string>('broadcast', (m) => { got2.push(m); });
-    
+
+    const unsub1 = await bus.subscribe<string>('broadcast', (m) => {
+      got1.push(m);
+    });
+    const unsub2 = await bus.subscribe<string>('broadcast', (m) => {
+      got2.push(m);
+    });
+
     await bus.publish('broadcast', 'message');
-    await new Promise(r => setTimeout(r, 10));
-    
+    await new Promise((r) => setTimeout(r, 10));
+
     expect(got1).toEqual(['message']);
     expect(got2).toEqual(['message']);
-    
+
     await unsub1();
     await unsub2();
     await bus.close();
@@ -50,12 +56,12 @@ describe('memory bus', () => {
 
   it('request timeout handling', async () => {
     const bus = createMemoryBus();
-    const unsub = await bus.subscribe<{ data: string; reply: string }>('slow', ({ data, reply }) => {
+    const unsub = await bus.subscribe<{ data: string; reply: string }>('slow', () => {
       // Don't reply - simulate timeout
     });
-    
+
     await expect(bus.request<string, string>('slow', 'test', 50)).rejects.toThrow('timeout');
-    
+
     await unsub();
     await bus.close();
   });
@@ -67,4 +73,4 @@ describe('memory bus', () => {
     expect(topics.runControl('123')).toBe('runs.123.control');
     expect(topics.agentHeartbeat('agent1')).toBe('agents.agent1.heartbeat');
   });
-}); 
+});
