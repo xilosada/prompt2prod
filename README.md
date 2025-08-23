@@ -19,7 +19,7 @@ The API server will be available at `http://localhost:3000` (or your custom port
 
 ## Development
 
-```bash
+````bash
 # Run tests
 pnpm test
 
@@ -37,6 +37,27 @@ pnpm build
 
 # Run all checks (lint, format, typecheck, test, build)
 pnpm check
+
+## Message Bus — NATS (optional)
+Default driver is **memory**. To use NATS locally:
+
+```bash
+docker compose -f docker-compose.nats.yml up -d
+export BUS_DRIVER=nats NATS_URL=nats://localhost:4222
+pnpm --filter @prompt2prod/api build && node packages/api/dist/index.js
+# In another shell:
+curl -N http://localhost:3000/runs/abc/logs/stream &
+curl -X POST http://localhost:3000/runs/abc/logs/test
+````
+
+### Tests (run locally before pushing)
+
+```bash
+docker compose -f docker-compose.nats.yml up -d
+export BUS_DRIVER=nats NATS_URL=nats://localhost:4222
+pnpm check
+```
+
 ```
 
 ## Code Style
@@ -46,3 +67,4 @@ pnpm check
 - Linter: eslint + @typescript-eslint (non type-aware)
 - Commit style: Conventional Commits (feat|fix|chore)
 - Run all checks: `pnpm check`
+```
