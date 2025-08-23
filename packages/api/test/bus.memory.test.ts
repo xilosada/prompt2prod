@@ -46,9 +46,45 @@ describe('memory bus', () => {
     await bus.close();
   });
 
+  it('request timeout rejects and removes listener', async () => {
+    const bus = createMemoryBus();
+    // No subscriber for this request
+    await expect(bus.request<string, string>('timeout-test', 'data', 10)).rejects.toThrow(
+      'timeout',
+    );
+    await bus.close();
+  });
+
+  it('unsubscribe prevents further messages', async () => {
+    const bus = createMemoryBus();
+    const got: string[] = [];
+    const unsub = await bus.subscribe<string>('unsub-test', (m) => {
+      got.push(m);
+    });
+
+    await bus.publish('unsub-test', 'before');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(got).toEqual(['before']);
+
+    await unsub();
+    await bus.publish('unsub-test', 'after');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(got).toEqual(['before']); // Should not receive 'after'
+
+    await bus.close();
+  });
+
+  it('close does not throw', async () => {
+    const bus = createMemoryBus();
+    await bus.subscribe<string>('test', () => {});
+    await expect(bus.close()).resolves.not.toThrow();
+  });
+
   it('topics helper shapes', () => {
     expect(topics.runLogs('123')).toBe('runs.123.logs');
     expect(topics.runPatch('123')).toBe('runs.123.patch');
     expect(topics.agentWork('a')).toBe('agents.a.work');
+    expect(topics.runControl('123')).toBe('runs.123.control');
+    expect(topics.agentHeartbeat('a')).toBe('agents.a.heartbeat');
   });
 });

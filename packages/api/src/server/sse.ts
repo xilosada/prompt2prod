@@ -1,11 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import type { Bus } from '../bus/Bus.js';
 import { topics } from '../bus/topics.js';
-import { createMemoryBus } from '../bus/memoryBus.js';
 
-// Temporary in-memory singleton; will be replaced by DI/factory in the NATS adapter PR.
-export const bus = createMemoryBus();
-
-export function registerSse(app: FastifyInstance) {
+export function registerSse(app: FastifyInstance, bus: Bus) {
   app.get('/runs/:id/logs/stream', async (req, reply) => {
     const runId = (req.params as { id: string }).id;
 

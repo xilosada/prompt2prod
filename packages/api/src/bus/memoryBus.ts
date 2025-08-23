@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { Bus } from './Bus.js';
+import type { Bus, SubOpts } from './Bus.js';
 
 export function createMemoryBus(): Bus {
   const ee = new EventEmitter();
@@ -14,8 +14,9 @@ export function createMemoryBus(): Bus {
     async subscribe<T>(
       subject: string,
       handler: (msg: T, meta: { subject: string }) => Promise<void> | void,
+      opts?: SubOpts, // eslint-disable-line @typescript-eslint/no-unused-vars
     ) {
-      // memory driver ignores opts.queue; broadcasts to all subscribers (dev-only)
+      // memory driver ignores opts.queue; broadcasts to all (dev-only)
       const h = (p: unknown) => {
         void Promise.resolve(handler(p as T, { subject })).catch(() => {});
       };
