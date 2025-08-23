@@ -17,4 +17,4 @@ Please do not create a public GitHub issue for security vulnerabilities.
 - Keep dependencies updated
 - Use HTTPS for all external requests
 - Validate and sanitize all inputs
-- Follow the principle of least privilege 
+- Follow the principle of least privilege
