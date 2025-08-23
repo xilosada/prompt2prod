@@ -18,6 +18,7 @@ export async function createNatsTransport(
   return {
     async publish(subject, payload) {
       // TODO: Add metadata headers when needed (e.g., timestamp, source, etc.)
+      // Headers are intentionally unused for now to keep the implementation simple
       nc.publish(subject, sc.encode(JSON.stringify(payload)));
     },
     async subscribe(subject, handler, subOpts) {
