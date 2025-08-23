@@ -119,6 +119,23 @@ The API subscribes to `runs.<id>.logs` and `runs.<id>.status` topics when a run 
 - Commit style: Conventional Commits (feat|fix|chore)
 - Run all checks: `pnpm check`
 
+## Patch Apply Engine (internal)
+
+Apply a patch into a workspace directory:
+
+```ts
+import { applyPatch } from '@prompt2prod/api/src/patch/apply';
+
+await applyPatch(
+  {
+    files: [{ path: 'README.generated.md', content: '# Hello' }],
+  },
+  { rootDir: '/tmp/work', normalizeEol: 'lf' },
+);
+```
+
+Security: paths are validated; traversal is rejected. Deterministic ordering for reproducible builds.
+
 ```
 
 ```
