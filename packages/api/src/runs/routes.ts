@@ -5,6 +5,8 @@ import { topics } from '../bus/topics.js';
 import type { RunsRepo } from './repo.memory.js';
 
 export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: RunsRepo }) {
+  // TODO: Consider exposing last error/reason on GET /runs/:id when state=error|canceled
+  // This would require storing the detail from status messages in the repo
   app.post(
     '/runs',
     {
