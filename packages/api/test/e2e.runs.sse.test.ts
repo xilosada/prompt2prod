@@ -125,7 +125,7 @@ describe('E2E: run dispatch + SSE logs', () => {
       expect(getRes.status).toBe(200);
       const rec = await getRes.json();
       expect(rec.id).toBe(id);
-      expect(rec.status).toBe('dispatched');
+      expect(rec.status).toBe('running');
 
       await unsubWork();
     } finally {

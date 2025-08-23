@@ -5,6 +5,7 @@ const topics = {
   agentWork: (agentId: string) => `agents.${agentId}.work`,
   runLogs: (runId: string) => `runs.${runId}.logs`,
   runPatch: (runId: string) => `runs.${runId}.patch`,
+  runStatus: (runId: string) => `runs.${runId}.status`,
   runControl: (runId: string) => `runs.${runId}.control`,
   agentHeartbeat: (agentId: string) => `agents.${agentId}.heartbeat`,
 };
@@ -55,6 +56,25 @@ export class AgentClient {
 
   async publishPatch(runId: string, patch: { files: Array<{ path: string; content: string }> }) {
     await this.t.publish(topics.runPatch(runId), patch);
+  }
+
+  async markDone(runId: string, result?: unknown) {
+    await this.t.publish(topics.runStatus(runId), { state: 'done', detail: result });
+  }
+
+  async markError(runId: string, error: unknown) {
+    // basic serialization
+    const detail =
+      typeof error === 'string'
+        ? error
+        : error instanceof Error
+          ? { name: error.name, message: error.message }
+          : error;
+    await this.t.publish(topics.runStatus(runId), { state: 'error', detail });
+  }
+
+  async markCanceled(runId: string, reason?: unknown) {
+    await this.t.publish(topics.runStatus(runId), { state: 'canceled', detail: reason });
   }
 
   async onControl(

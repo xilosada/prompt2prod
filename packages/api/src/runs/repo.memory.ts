@@ -1,4 +1,4 @@
-export type RunStatus = 'queued' | 'dispatched' | 'done' | 'error';
+export type RunStatus = 'queued' | 'dispatched' | 'running' | 'done' | 'error' | 'canceled';
 
 export type RunRecord = {
   id: string;

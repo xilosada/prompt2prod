@@ -97,6 +97,20 @@ Fetch run metadata:
 curl -s http://localhost:3000/runs/<uuid>
 ```
 
+### Run Lifecycle
+
+Runs automatically transition through statuses via bus messages:
+
+- **queued** → **dispatched** → **running** (on first log) → **done**|**error**|**canceled**
+
+The API subscribes to `runs.<id>.logs` and `runs.<id>.status` topics when a run is created. Agents can emit status updates:
+
+```json
+{"state": "done", "detail": {"result": "success"}}
+{"state": "error", "detail": "Something went wrong"}
+{"state": "canceled", "detail": "User requested cancellation"}
+```
+
 ## Code Style
 
 - Language: TypeScript (Node ESM)
