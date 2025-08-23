@@ -1,7 +1,7 @@
 {
   "name": "prompt2prod",
   "private": true,
-  "packageManager": "pnpm@9",
+  "packageManager": "pnpm@10.14.0",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -13,25 +13,28 @@
     "url": "https://github.com/xilosada/prompt2prod/issues"
   },
   "engines": {
-    "node": ">=22.0.0",
-    "pnpm": ">=9.0.0"
+    "node": ">=20 <24"
   },
   "scripts": {
     "dev": "pnpm --filter @prompt2prod/api dev",
-    "build": "pnpm -r --parallel build",
-    "typecheck": "pnpm -r --parallel typecheck",
-    "test": "pnpm -r --parallel test",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
     "lint": "eslint . --ext .ts",
+    "format": "prettier -w .",
     "format:check": "prettier -c .",
-    "dev": "pnpm --filter @prompt2prod/api dev"
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
+    "ci:local": "pnpm check",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
     "eslint": "^8.56.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
+    "husky": "^9.0.0",
     "prettier": "^3.3.0",
+    "typescript": "^5.5.0",
     "vitest": "^2.0.0"
   }
 }
