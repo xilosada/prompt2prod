@@ -8,7 +8,6 @@ export async function createNatsTransport(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let nats: any;
   try {
-    // @ts-expect-error - NATS is an optional dependency
     nats = await import('nats');
   } catch {
     throw new Error('NATS package not installed. Install with: pnpm add nats');
