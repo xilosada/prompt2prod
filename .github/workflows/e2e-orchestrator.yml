@@ -1,0 +1,94 @@
+name: e2e-orchestrator
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/api/**'
+      - '.github/workflows/e2e-orchestrator.yml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  orchestrator-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace
+        run: pnpm -w build
+
+      - name: Start API (background)
+        run: |
+          node packages/api/dist/index.js > api.log 2>&1 &
+          echo $! > server.pid
+          # wait a moment for server to start
+          sleep 2
+          grep -q "listening on :3000" api.log || (echo "API did not start"; cat api.log; exit 1)
+
+      - name: Prepare bare remote
+        run: |
+          mkdir -p "$RUNNER_TEMP/remote"
+          git init --bare "$RUNNER_TEMP/remote/remote.git"
+
+      - name: Compose (no PAT) — expect 500 github_token_missing
+        run: |
+          set -e
+          ID="ci"
+          BODY=$(cat <<'JSON'
+          {
+            "repo": "org/repo",
+            "base": "main",
+            "title": "ci e2e",
+            "remoteUrl": "file://__REMOTE__",
+            "patch": { "files": [ { "path": "x.txt", "content": "y" } ] }
+          }
+          JSON
+          )
+          BODY=${BODY/__REMOTE__/${RUNNER_TEMP//\//\\/}\/remote\/remote.git}
+          CODE=$(curl -s -o resp.json -w "%{http_code}" -X POST "http://localhost:3000/runs/${ID}/pr/compose" \
+            -H 'content-type: application/json' \
+            -d "$BODY")
+          echo "HTTP $CODE"
+          cat resp.json
+          # assert 500 due to missing PAT (but git push should have succeeded)
+          test "$CODE" -eq 500
+          grep -q '"github_token_missing"' resp.json
+
+      - name: Verify branch and file in bare remote
+        run: |
+          set -e
+          GIT_DIR="$RUNNER_TEMP/remote/remote.git"
+          # default head is feat/run-<id>
+          BR="refs/heads/feat/run-ci"
+          git --git-dir="$GIT_DIR" rev-parse --verify "$BR"
+          git --git-dir="$GIT_DIR" ls-tree --name-only "$BR" | grep -q "^x.txt$"
+
+      - name: Stop API
+        if: always()
+        run: |
+          kill "$(cat server.pid)" 2>/dev/null || true
+          sleep 1
+          pkill -f "packages/api/dist/index.js" || true
+          echo "----- api.log -----"
+          sed -n '1,200p' api.log || true
