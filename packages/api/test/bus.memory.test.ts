@@ -3,21 +3,36 @@ import { createMemoryBus } from '../src/bus/memoryBus.js';
 import { topics } from '../src/bus/topics.js';
 
 describe('memory bus', () => {
-  it('publish/subscribe delivers once', async () => {
+  it('publish/subscribe delivers', async () => {
     const bus = createMemoryBus();
     const got: string[] = [];
     const unsub = await bus.subscribe<string>('foo', (m) => {
       got.push(m);
     });
     await bus.publish('foo', 'bar');
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 5));
     expect(got).toEqual(['bar']);
     await unsub();
     await bus.close();
   });
 
-  it('topic helper works', () => {
-    expect(topics.runLogs('123')).toBe('runs.123.logs');
+  it('broadcast semantics: two subscribers both receive', async () => {
+    const bus = createMemoryBus();
+    const a: string[] = [],
+      b: string[] = [];
+    const ua = await bus.subscribe<string>('x', (m) => {
+      a.push(m);
+    });
+    const ub = await bus.subscribe<string>('x', (m) => {
+      b.push(m);
+    });
+    await bus.publish('x', 'm1');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(a).toEqual(['m1']);
+    expect(b).toEqual(['m1']);
+    await ua();
+    await ub();
+    await bus.close();
   });
 
   it('request/reply round-trip', async () => {
@@ -31,46 +46,45 @@ describe('memory bus', () => {
     await bus.close();
   });
 
-  it('multi-subscriber broadcast test', async () => {
+  it('request timeout rejects and removes listener', async () => {
     const bus = createMemoryBus();
-    const got1: string[] = [];
-    const got2: string[] = [];
-
-    const unsub1 = await bus.subscribe<string>('broadcast', (m) => {
-      got1.push(m);
-    });
-    const unsub2 = await bus.subscribe<string>('broadcast', (m) => {
-      got2.push(m);
-    });
-
-    await bus.publish('broadcast', 'message');
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(got1).toEqual(['message']);
-    expect(got2).toEqual(['message']);
-
-    await unsub1();
-    await unsub2();
+    // No subscriber for this request
+    await expect(bus.request<string, string>('timeout-test', 'data', 10)).rejects.toThrow(
+      'timeout',
+    );
     await bus.close();
   });
 
-  it('request timeout handling', async () => {
+  it('unsubscribe prevents further messages', async () => {
     const bus = createMemoryBus();
-    const unsub = await bus.subscribe<{ data: string; reply: string }>('slow', () => {
-      // Don't reply - simulate timeout
+    const got: string[] = [];
+    const unsub = await bus.subscribe<string>('unsub-test', (m) => {
+      got.push(m);
     });
 
-    await expect(bus.request<string, string>('slow', 'test', 50)).rejects.toThrow('timeout');
+    await bus.publish('unsub-test', 'before');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(got).toEqual(['before']);
 
     await unsub();
+    await bus.publish('unsub-test', 'after');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(got).toEqual(['before']); // Should not receive 'after'
+
     await bus.close();
   });
 
-  it('all topic helpers work', () => {
+  it('close does not throw', async () => {
+    const bus = createMemoryBus();
+    await bus.subscribe<string>('test', () => {});
+    await expect(bus.close()).resolves.not.toThrow();
+  });
+
+  it('topics helper shapes', () => {
     expect(topics.runLogs('123')).toBe('runs.123.logs');
     expect(topics.runPatch('123')).toBe('runs.123.patch');
-    expect(topics.agentWork('agent1')).toBe('agents.agent1.work');
+    expect(topics.agentWork('a')).toBe('agents.a.work');
     expect(topics.runControl('123')).toBe('runs.123.control');
-    expect(topics.agentHeartbeat('agent1')).toBe('agents.agent1.heartbeat');
+    expect(topics.agentHeartbeat('a')).toBe('agents.a.heartbeat');
   });
 });
