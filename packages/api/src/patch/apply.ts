@@ -60,9 +60,10 @@ function assertAbsolute(p: string) {
 
 function sanitizeRelative(rel: string): string {
   const norm = rel.replace(/\\/g, '/');
-  if (!norm || norm.startsWith('/') || norm.includes('..')) {
-    throw new Error(`Unsafe path: ${rel}`);
-  }
+  if (!norm || norm.startsWith('/')) throw new Error(`Unsafe path: ${rel}`);
+  // Reject empty segments, '.' or '..' segments
+  const bad = norm.split('/').some((seg) => seg.length === 0 || seg === '.' || seg === '..');
+  if (bad) throw new Error(`Unsafe path: ${rel}`);
   return norm;
 }
 
@@ -206,6 +207,25 @@ export async function applyPatch(patch: Patch, opts: ApplyOptions): Promise<Appl
   const deleted: string[] = [];
   const renamed: Array<{ from: string; to: string }> = [];
 
+  // Map rel -> write payload (content + per-file eol) for quick lookup
+  const writePayloadByRel = (() => {
+    const m = new Map<string, { content: string; eol?: EolMode }>();
+    if ('ops' in patch && patch.ops) {
+      for (const op of patch.ops) {
+        if (op.kind === 'write') {
+          const rel = sanitizeRelative(op.path);
+          m.set(rel, { content: op.content, eol: op.eol });
+        }
+      }
+    } else if ('files' in patch && patch.files) {
+      for (const f of patch.files) {
+        const rel = sanitizeRelative(f.path);
+        m.set(rel, { content: f.content, eol: f.eol });
+      }
+    }
+    return m;
+  })();
+
   if (dryRun) {
     // Simulate results without touching the filesystem
     for (const d of plan.deletes) if (d.exists) deleted.push(d.abs);
@@ -250,19 +270,9 @@ export async function applyPatch(patch: Patch, opts: ApplyOptions): Promise<Appl
       continue;
     }
 
-    // Get the content from the original patch
-    let content: string;
-    if (patch.ops) {
-      const writeOp = patch.ops.find(
-        (o) => o.kind === 'write' && sanitizeRelative(o.path) === w.rel,
-      ) as WriteOp;
-      content = writeOp.content;
-    } else {
-      const file = patch.files!.find((f) => sanitizeRelative(f.path) === w.rel)!;
-      content = file.content;
-    }
-
-    const normalized = applyEol(content, w.eol);
+    const payload = writePayloadByRel.get(w.rel);
+    if (!payload) throw new Error(`Internal: missing payload for ${w.rel}`);
+    const normalized = applyEol(payload.content, w.eol);
     await writeFileAtomic(w.abs, normalized, atomic, overwrite);
     wrote.push(w.abs);
   }

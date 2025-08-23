@@ -122,6 +122,34 @@ describe('applyPatch (complete)', () => {
     ).rejects.toThrow(/Unsafe path/);
   });
 
+  it('allows names that contain ".." inside a segment (e.g., "foo..bar")', async () => {
+    await applyPatch({ files: [{ path: 'dir/foo..bar.txt', content: 'ok' }] }, { rootDir: tmp });
+    expect(readFileSync(p('dir/foo..bar.txt'), 'utf8')).toBe('ok');
+  });
+
+  it('rejects "." segments and empty segments', async () => {
+    await expect(
+      applyPatch({ files: [{ path: 'a/./b.txt', content: 'x' }] }, { rootDir: tmp }),
+    ).rejects.toThrow(/Unsafe path/);
+    await expect(
+      applyPatch({ files: [{ path: 'a//b.txt', content: 'x' }] }, { rootDir: tmp }),
+    ).rejects.toThrow(/Unsafe path/);
+  });
+
+  it('rename respects overwrite=false (skips when destination exists)', async () => {
+    // seed
+    writeFileSync(p('from.txt'), 'A', 'utf8');
+    writeFileSync(p('to.txt'), 'B', 'utf8');
+    const res = await applyPatch(
+      { ops: [{ kind: 'rename', from: 'from.txt', to: 'to.txt' }] },
+      { rootDir: tmp, overwrite: false },
+    );
+    // destination kept; source unchanged
+    expect(readFileSync(p('to.txt'), 'utf8')).toBe('B');
+    expect(readFileSync(p('from.txt'), 'utf8')).toBe('A');
+    expect(res.renamed).toEqual([]);
+  });
+
   it('backward compatibility with files API', async () => {
     const res = await applyPatch(
       { files: [{ path: 'test.txt', content: 'hello' }] },
