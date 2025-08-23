@@ -26,16 +26,13 @@ describe('bus factory', () => {
     await bus.close();
   });
 
-  it.skip('creates nats bus when BUS_DRIVER=nats', async () => {
+  const itNats = process.env.BUS_DRIVER === 'nats' ? it : it.skip;
+  itNats('creates nats bus when BUS_DRIVER=nats', async () => {
     process.env.BUS_DRIVER = 'nats';
     process.env.NATS_URL = 'nats://localhost:4222';
 
-    // This test will timeout if NATS is not available, which is expected
-    // In CI, NATS will be available and this will work
     const bus = await createBus();
     expect(bus).toBeDefined();
-
-    // Close should work even if connection failed
     await bus.close();
   });
 });

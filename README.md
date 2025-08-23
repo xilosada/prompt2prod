@@ -42,6 +42,10 @@ pnpm check
 Default driver is **memory**. To use NATS locally:
 
 ```bash
+# Copy environment template (optional)
+cp .env.example .env
+
+# Start NATS
 docker compose -f docker-compose.nats.yml up -d
 export BUS_DRIVER=nats NATS_URL=nats://localhost:4222
 pnpm --filter @prompt2prod/api build && node packages/api/dist/index.js

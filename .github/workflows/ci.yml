@@ -27,7 +27,7 @@ jobs:
         ports:
           - 4222:4222
         options: >-
-          --health-cmd "nats-server -t || exit 1"
+          --health-cmd "sh -c 'exec 3<>/dev/tcp/127.0.0.1/4222'"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
