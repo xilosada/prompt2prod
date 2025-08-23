@@ -80,6 +80,21 @@ node examples/agents/mock/index.ts
 
 Set `BUS_DRIVER=nats NATS_URL=...` to use NATS transport (optional).
 
+## API — Runs
+
+Create a run and dispatch work to an agent:
+
+```bash
+curl -s -X POST http://localhost:3000/runs \
+  -H 'content-type: application/json' \
+  -d '{"agentId":"agent-1","repo":"org/repo","base":"main","prompt":"hello"}'
+# → {"id":"<uuid>"}
+```
+
+Fetch run metadata:
+
+```bash
+curl -s http://localhost:3000/runs/<uuid>
 ```
 
 ## Code Style
@@ -89,4 +104,7 @@ Set `BUS_DRIVER=nats NATS_URL=...` to use NATS transport (optional).
 - Linter: eslint + @typescript-eslint (non type-aware)
 - Commit style: Conventional Commits (feat|fix|chore)
 - Run all checks: `pnpm check`
+
+```
+
 ```
