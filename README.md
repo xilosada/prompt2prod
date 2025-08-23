@@ -62,6 +62,24 @@ export BUS_DRIVER=nats NATS_URL=nats://localhost:4222
 pnpm check
 ```
 
+## Agent SDK (Node)
+
+Install & run the mock agent locally (memory transport):
+
+```bash
+pnpm --filter @prompt2prod/sdk-agent-node build
+pnpm --filter @prompt2prod/sdk-agent-node example
+```
+
+Or run directly:
+
+```bash
+pnpm --filter @prompt2prod/sdk-agent-node build
+node examples/agents/mock/index.ts
+```
+
+Set `BUS_DRIVER=nats NATS_URL=...` to use NATS transport (optional).
+
 ```
 
 ## Code Style
