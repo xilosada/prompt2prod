@@ -10,7 +10,7 @@ export function buildServer() {
 
   const repo = createMemoryRunsRepo();
 
-  // Create bus and register all routes that depend on it
+  // Create the bus ONCE and register all routes that depend on it
   void createBus().then((bus) => {
     registerSse(app, bus);
     registerRunRoutes(app, { bus, repo });

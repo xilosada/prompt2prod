@@ -4,6 +4,7 @@ import { registerRunRoutes } from '../src/runs/routes.js';
 import { createMemoryRunsRepo } from '../src/runs/repo.memory.js';
 import { createMemoryBus } from '../src/bus/memoryBus.js';
 import { topics } from '../src/bus/topics.js';
+import type { Bus } from '../src/bus/Bus.js';
 
 type WorkItem = {
   runId: string;
@@ -69,5 +70,32 @@ describe('runs routes', () => {
 
     const nf = await app.inject({ method: 'GET', url: `/runs/does-not-exist` });
     expect(nf.statusCode).toBe(404);
+  });
+
+  it('POST /runs sets status=error and returns 503 if publish fails', async () => {
+    const app = Fastify();
+    const failingBus = {
+      publish: async () => {
+        throw new Error('boom');
+      },
+      subscribe: async () => async () => {},
+      request: async () => {
+        throw new Error('not-used');
+      },
+      close: async () => {},
+    } as Bus;
+    const repo = createMemoryRunsRepo();
+    registerRunRoutes(app, { bus: failingBus, repo });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/runs',
+      payload: { agentId: 'a', repo: 'o/r', base: 'main', prompt: 'p' },
+    });
+    expect(res.statusCode).toBe(503);
+    const body = res.json() as { error: string; id: string };
+    expect(body.error).toBe('dispatch_failed');
+    const rec = repo.get(body.id);
+    expect(rec?.status).toBe('error');
   });
 });

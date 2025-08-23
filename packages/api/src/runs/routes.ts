@@ -43,17 +43,21 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
         payload: body.payload,
       });
 
-      // publish work item to agent queue
-      await deps.bus.publish(topics.agentWork(body.agentId), {
-        runId: id,
-        repo: body.repo,
-        base: body.base,
-        prompt: body.prompt,
-        payload: body.payload,
-      });
-
-      deps.repo.setStatus(id, 'dispatched');
-      reply.code(201).send({ id });
+      try {
+        // publish work item to agent queue
+        await deps.bus.publish(topics.agentWork(body.agentId), {
+          runId: id,
+          repo: body.repo,
+          base: body.base,
+          prompt: body.prompt,
+          payload: body.payload,
+        });
+        deps.repo.setStatus(id, 'dispatched');
+        reply.code(201).send({ id });
+      } catch {
+        deps.repo.setStatus(id, 'error');
+        reply.code(503).send({ error: 'dispatch_failed', id });
+      }
     },
   );
 
