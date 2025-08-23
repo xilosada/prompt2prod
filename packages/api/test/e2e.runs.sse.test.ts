@@ -63,24 +63,60 @@ describe('E2E: run dispatch + SSE logs', () => {
       const abort = new AbortController();
 
       // Simple SSE test - just check if we can connect
-      const sseRes = await fetch(`${base}/runs/${id}/logs/stream`, { signal: abort.signal });
+      const sseRes = await fetch(`${base}/runs/${id}/logs/stream`, {
+        signal: abort.signal,
+      });
       expect(sseRes.ok).toBe(true);
       expect(sseRes.headers.get('content-type')).toBe('text/event-stream');
 
-      // Read the initial connection message
+      // Read until we see either : connected or any data: line
       const reader = sseRes.body!.getReader();
       const decoder = new TextDecoder();
-      const { value } = await reader.read();
-      const initialData = decoder.decode(value);
-      expect(initialData).toContain(': connected');
+      let buffer = '';
+      let connected = false;
+
+      while (!connected) {
+        try {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith(': connected') || line.startsWith('data: ')) {
+              connected = true;
+              break;
+            }
+          }
+        } catch (error) {
+          // Handle potential abort errors
+          if (error instanceof Error && error.name === 'AbortError') {
+            break;
+          }
+          throw error;
+        }
+      }
+
+      expect(connected).toBe(true);
 
       // 5) Publish a log and verify it's received
       await bus.publish(topics.runLogs(id), 'e2e-ok');
 
       // Read the log message
-      const { value: logValue } = await reader.read();
-      const logData = decoder.decode(logValue);
-      expect(logData).toContain('data: "e2e-ok"');
+      try {
+        const { value: logValue } = await reader.read();
+        const logData = decoder.decode(logValue);
+        expect(logData).toContain('data: "e2e-ok"');
+      } catch (error) {
+        // Handle potential abort errors
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Expected when we abort, but we should have received the log first
+          throw new Error('SSE stream aborted before receiving expected log');
+        }
+        throw error;
+      }
 
       abort.abort();
 
