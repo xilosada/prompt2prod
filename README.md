@@ -198,6 +198,8 @@ curl -X POST http://localhost:3000/runs/<id>/pr \
  -d '{"repo":"org/repo","head":"feat/branch","base":"main","title":"Automated PR"}'
 ```
 
+**Note:** For cross-repo PRs, the `head` parameter may need to be in `owner:branch` format (GitHub API nuance).
+
 ```
 
 ```

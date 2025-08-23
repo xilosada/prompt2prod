@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import { registerPrRoutes } from '../src/runs/pr.routes.js';
 
+const mockCreate = vi
+  .fn()
+  .mockResolvedValue({ data: { number: 123, html_url: 'https://gh/pr/123' } });
+const mockOctokit = { rest: { pulls: { create: mockCreate } } };
+
 vi.mock('octokit', () => {
-  const create = vi
-    .fn()
-    .mockResolvedValue({ data: { number: 123, html_url: 'https://gh/pr/123' } });
-  const Octokit = vi.fn().mockImplementation(() => ({ rest: { pulls: { create } } }));
+  const Octokit = vi.fn().mockImplementation(() => mockOctokit);
   return { Octokit };
 });
 
@@ -50,5 +52,19 @@ describe('POST /runs/:id/pr', () => {
     });
     expect(res.statusCode).toBe(500);
     expect(res.json()).toEqual({ error: 'github_token_missing' });
+  });
+
+  it('errors when Octokit throws (502)', async () => {
+    mockCreate.mockRejectedValueOnce(new Error('API rate limit exceeded'));
+
+    const app = Fastify();
+    registerPrRoutes(app);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/runs/abc/pr',
+      payload: { repo: 'org/repo', head: 'b', base: 'main', title: 't' },
+    });
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toEqual({ error: 'github_api_error' });
   });
 });

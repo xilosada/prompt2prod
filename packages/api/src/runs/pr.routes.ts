@@ -40,14 +40,14 @@ export function registerPrRoutes(app: FastifyInstance) {
         draft?: boolean;
       };
       try {
-        const [owner, name] = repo.split('/');
+        const [owner, name] = repo.trim().split('/');
         const octokit = getOctokit(); // throws if missing
         const { number, url } = await createPullRequest(octokit, {
           owner,
           repo: name,
-          head,
-          base,
-          title,
+          head: head.trim(),
+          base: base.trim(),
+          title: title.trim(),
           body,
           draft,
         });
