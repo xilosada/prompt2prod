@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+echo "Running local CI (pnpm check)…"
+pnpm check

@@ -34,4 +34,15 @@ pnpm format:check
 
 # Build all packages
 pnpm build
+
+# Run all checks (lint, format, typecheck, test, build)
+pnpm check
 ```
+
+## Code Style
+
+- Language: TypeScript (Node ESM)
+- Formatter: Prettier (singleQuote, semi, trailingComma=all, printWidth=100)
+- Linter: eslint + @typescript-eslint (non type-aware)
+- Commit style: Conventional Commits (feat|fix|chore)
+- Run all checks: `pnpm check`
