@@ -182,6 +182,22 @@ await push('/tmp/work', 'feat/patch');
 
 Supports bare remote creation, workspace initialization, branch management, staging, committing, and pushing to local file-based remotes.
 
+## GitHub PR (PAT)
+
+Set a PAT with `repo` scope:
+
+```bash
+export GITHUB_TOKEN=ghp_***
+```
+
+Create a PR:
+
+```bash
+curl -X POST http://localhost:3000/runs/<id>/pr \
+ -H 'content-type: application/json' \
+ -d '{"repo":"org/repo","head":"feat/branch","base":"main","title":"Automated PR"}'
+```
+
 ```
 
 ```
