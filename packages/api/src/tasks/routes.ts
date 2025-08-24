@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { MemoryTaskRepo, CreateTaskInput } from './repo.memory.js';
+import type { TaskOrchestrator } from './orchestrator.js';
 
 // JSON Schemas
 const createTaskSchema = {
@@ -90,6 +91,19 @@ const taskResponseSchema = {
       },
     },
     error: { type: 'string' },
+    runs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          id: { type: 'string' },
+          agentId: { type: 'string' },
+          createdAt: { type: 'string' },
+        },
+        required: ['id', 'agentId', 'createdAt'],
+      },
+    },
   },
   required: ['id', 'title', 'goal', 'targetRepo', 'agents', 'state', 'createdAt', 'updatedAt'],
 };
@@ -187,8 +201,15 @@ function generateLinkHeaders(
   return headers;
 }
 
-export async function taskRoutes(fastify: FastifyInstance) {
-  const taskRepo = new MemoryTaskRepo();
+export async function taskRoutes(
+  fastify: FastifyInstance,
+  orchestrator?: TaskOrchestrator,
+  taskRepo?: MemoryTaskRepo,
+) {
+  const taskRepoInstance = taskRepo || new MemoryTaskRepo();
+
+  // Store orchestrator in fastify instance for access in route handlers
+  (fastify as { _taskOrchestrator?: TaskOrchestrator })._taskOrchestrator = orchestrator;
 
   // POST /tasks - Create a new task
   fastify.post(
@@ -205,8 +226,30 @@ export async function taskRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const cleanedInput = cleanTaskInput(request.body as Record<string, unknown>);
-        const task = taskRepo.create(cleanedInput);
-        return reply.status(201).header('Location', `/tasks/${task.id}`).send(task);
+        const task = taskRepoInstance.create(cleanedInput);
+
+        // Orchestrator hook: spawn run if agents are available
+        const taskOrchestrator = (fastify as { _taskOrchestrator?: TaskOrchestrator })
+          ._taskOrchestrator;
+        if (taskOrchestrator && task.agents.length > 0) {
+          const agentId = task.agents[0]; // Use first agent for MVP
+          try {
+            const runId = await taskOrchestrator.spawnRunForTask(task, agentId);
+            // Watch the run for status updates
+            await taskOrchestrator.watchRunForTask(runId, task.id);
+          } catch (error) {
+            // Log error but don't fail the task creation
+            fastify.log.warn(
+              'Failed to spawn run for task %s: %s',
+              task.id,
+              (error as Error).message,
+            );
+          }
+        }
+
+        // Get the updated task from the repo (in case orchestrator modified it)
+        const updatedTask = taskRepoInstance.get(task.id) || task;
+        return reply.status(201).header('Location', `/tasks/${updatedTask.id}`).send(updatedTask);
       } catch (error) {
         return reply.status(400).send({
           error: (error as Error).message,
@@ -240,7 +283,7 @@ export async function taskRoutes(fastify: FastifyInstance) {
           sort?: string;
         };
 
-        const result = taskRepo.list({ limit, offset, sort });
+        const result = taskRepoInstance.list({ limit, offset, sort });
 
         // Add Link headers for pagination
         const baseUrl = `${request.protocol}://${request.hostname}${request.url.split('?')[0]}`;
@@ -274,7 +317,7 @@ export async function taskRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const task = taskRepo.get(id);
+      const task = taskRepoInstance.get(id);
 
       if (!task) {
         return reply.status(404).send({

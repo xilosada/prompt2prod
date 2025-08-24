@@ -26,8 +26,10 @@ describe('Tasks API', () => {
       goal: 'Speed up checks',
       targetRepo: 'file:///tmp/remote.git',
       agents: ['qa', 'infra'],
-      state: 'planned',
+      state: 'running', // With orchestrator, tasks with agents start as running
     });
+    expect(task.runs).toHaveLength(1);
+    expect(task.runs[0].agentId).toBe('qa');
 
     expect(task.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(task.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -88,8 +90,10 @@ describe('Tasks API', () => {
       goal: 'Test goal',
       targetRepo: 'https://github.com/owner/repo',
       agents: ['qa', 'infra'],
-      state: 'planned',
+      state: 'running', // With orchestrator, tasks with agents start as running
     });
+    expect(task.runs).toHaveLength(1);
+    expect(task.runs[0].agentId).toBe('qa');
   });
 
   it('POST /tasks - filters out empty agent entries', async () => {

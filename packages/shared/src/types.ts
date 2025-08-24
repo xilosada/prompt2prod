@@ -22,6 +22,8 @@ export type TaskState =
   | 'error'
   | 'canceled';
 
+export type TaskRunRef = { id: string; agentId: string; createdAt: string };
+
 export type Task = {
   id: string;
   title: string;
@@ -34,4 +36,5 @@ export type Task = {
   updatedAt: string; // ISO
   pr?: { url?: string; number?: number; branch?: string }; // reserved for later
   error?: string; // reserved for later
+  runs?: TaskRunRef[]; // optional list; for MVP it'll contain at most 1 entry
 };

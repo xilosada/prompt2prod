@@ -124,6 +124,26 @@ curl -s http://localhost:3000/tasks/<id>
 
 **Task states**: `planned` (initial) → `running` → `awaiting-approvals` → `done`/`error`/`canceled`
 
+### Task Orchestrator (MVP)
+
+The Task Orchestrator automatically manages the lifecycle of tasks by spawning runs and advancing task state based on run status:
+
+**Auto-spawn behavior**:
+
+- When a task is created with agents, the orchestrator automatically spawns a run to the first agent
+- The task state transitions from `planned` to `running`
+- A `runs` array is attached to the task containing the run reference
+
+**State transitions**:
+
+- **`running`** → **`awaiting-approvals`**: When the run completes with PR information (composer populates `run.pr`)
+- **`running`** → **`done`**: When the run completes without PR information
+- **`running`** → **`error`**: When the run fails or is canceled
+
+**Idempotency**: If a task already has runs, no additional runs are spawned.
+
+**Note**: Moving to `awaiting-approvals` requires that the **composer** has populated `run.pr` with branch, URL, and number information.
+
 ### Coordinator Intake
 
 Create a task via coordinator submission with strict validation:
