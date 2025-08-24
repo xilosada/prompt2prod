@@ -11,6 +11,8 @@ export function registerSse(app: FastifyInstance, bus: Bus) {
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': 'http://localhost:5173',
+      'Access-Control-Allow-Credentials': 'true',
     });
 
     reply.raw.write(': connected\n\n');
