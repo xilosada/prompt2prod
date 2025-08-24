@@ -61,6 +61,25 @@ export function buildServer() {
     // For now, we'll expose this function for testing purposes
     (agentRegistry as { _subscribeToAgent?: typeof subscribeToAgent })._subscribeToAgent =
       subscribeToAgent;
+
+    // Memory bus guard: log info about wildcard limitation
+    const driver = (process.env.BUS_DRIVER ?? 'memory').toLowerCase();
+    if (driver === 'memory') {
+      console.log('Agent registry: Memory bus detected - manual agent subscription required');
+      console.log('For production with NATS, wildcard subscriptions will be used automatically');
+    }
+
+    // Cleanup subscriptions on server close
+    app.addHook('onClose', async () => {
+      try {
+        for (const unsub of agentSubscriptions.values()) {
+          await unsub();
+        }
+        agentSubscriptions.clear();
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
   });
 
   return app;

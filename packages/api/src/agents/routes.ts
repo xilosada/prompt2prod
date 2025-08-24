@@ -4,7 +4,7 @@ const agentViewSchema = {
   type: 'object',
   properties: {
     id: { type: 'string' },
-    lastSeen: { type: 'number' },
+    lastSeen: { type: 'integer' }, // ms since epoch
     status: { type: 'string', enum: ['online', 'stale', 'offline'] },
     caps: {
       type: 'object',

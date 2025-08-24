@@ -154,6 +154,23 @@ curl -s http://localhost:3000/agents/agent-1
 
 Returns 404 if agent not found.
 
+### Example Heartbeat Payload
+
+Agents send heartbeats with optional capabilities:
+
+```json
+{
+  "at": 1703123456789,
+  "caps": {
+    "lang": "node",
+    "version": "1.0.0",
+    "features": ["git", "docker"]
+  }
+}
+```
+
+The `caps` field is optional and can contain any JSON object (max 32KB).
+
 ### Run Lifecycle
 
 Runs automatically transition through statuses via bus messages:

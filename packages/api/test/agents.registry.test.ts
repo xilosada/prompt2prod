@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   createMemoryAgentRegistry,
   statusFrom,
@@ -10,6 +10,12 @@ describe('agent registry', () => {
 
   beforeEach(() => {
     registry = createMemoryAgentRegistry();
+    // Use fake timers for deterministic testing
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('statusFrom', () => {
@@ -32,7 +38,8 @@ describe('agent registry', () => {
     });
 
     it('uses current time when now is not provided', () => {
-      const recent = Date.now() - 5000;
+      const now = Date.now();
+      const recent = now - 5000;
       const status = statusFrom(recent);
       expect(status).toBe('online');
     });
@@ -40,17 +47,28 @@ describe('agent registry', () => {
     it('handles edge cases at threshold boundaries', () => {
       const now = Date.now();
 
-      // At online threshold
+      // At online threshold (inclusive)
       expect(statusFrom(now - STATUS_THRESHOLDS.ONLINE_TTL, now)).toBe('online');
 
-      // Just over online threshold
+      // Just over online threshold (exclusive)
       expect(statusFrom(now - STATUS_THRESHOLDS.ONLINE_TTL - 1, now)).toBe('stale');
 
-      // At stale threshold
+      // At stale threshold (inclusive)
       expect(statusFrom(now - STATUS_THRESHOLDS.STALE_TTL, now)).toBe('stale');
 
-      // Just over stale threshold
+      // Just over stale threshold (exclusive)
       expect(statusFrom(now - STATUS_THRESHOLDS.STALE_TTL - 1, now)).toBe('offline');
+    });
+
+    it('pins exact boundary values to prevent drift', () => {
+      const now = Date.now();
+
+      // Exact boundary tests - these should never change
+      expect(statusFrom(now - 0, now)).toBe('online'); // exactly now
+      expect(statusFrom(now - STATUS_THRESHOLDS.ONLINE_TTL, now)).toBe('online'); // exactly at online threshold
+      expect(statusFrom(now - STATUS_THRESHOLDS.ONLINE_TTL - 1, now)).toBe('stale'); // 1ms over online threshold
+      expect(statusFrom(now - STATUS_THRESHOLDS.STALE_TTL, now)).toBe('stale'); // exactly at stale threshold
+      expect(statusFrom(now - STATUS_THRESHOLDS.STALE_TTL - 1, now)).toBe('offline'); // 1ms over stale threshold
     });
   });
 
@@ -58,6 +76,7 @@ describe('agent registry', () => {
     it('creates new agent entry', () => {
       const agentId = 'test-agent-1';
       const caps = { feature: 'test' };
+      const now = Date.now();
 
       registry.upsertHeartbeat(agentId, caps);
 
@@ -65,7 +84,7 @@ describe('agent registry', () => {
       expect(entry).toBeDefined();
       expect(entry?.id).toBe(agentId);
       expect(entry?.caps).toEqual(caps);
-      expect(entry?.lastSeen).toBeGreaterThan(Date.now() - 1000); // Within last second
+      expect(entry?.lastSeen).toBe(now); // Should be exactly now with fake timers
     });
 
     it('updates existing agent entry', () => {
@@ -78,12 +97,8 @@ describe('agent registry', () => {
       const entry1 = registry._getRawEntry(agentId);
       const firstSeen = entry1!.lastSeen;
 
-      // Wait a bit
-      const waitTime = 100;
-      const start = Date.now();
-      while (Date.now() - start < waitTime) {
-        // Busy wait
-      }
+      // Advance time
+      vi.advanceTimersByTime(100);
 
       // Second heartbeat
       registry.upsertHeartbeat(agentId, caps2);
@@ -105,6 +120,23 @@ describe('agent registry', () => {
 
       const entry = registry._getRawEntry(agentId);
       expect(entry?.caps).toEqual(caps); // Should preserve original caps
+    });
+
+    it('rejects oversized caps to prevent memory issues', () => {
+      const agentId = 'test-agent-4';
+      const originalCaps = { feature: 'test' };
+
+      // First heartbeat with normal caps
+      registry.upsertHeartbeat(agentId, originalCaps);
+
+      // Create oversized caps (more than 32KB)
+      const oversizedCaps = { data: 'x'.repeat(33 * 1024) };
+
+      // Second heartbeat with oversized caps
+      registry.upsertHeartbeat(agentId, oversizedCaps);
+
+      const entry = registry._getRawEntry(agentId);
+      expect(entry?.caps).toEqual(originalCaps); // Should preserve original caps, not oversized ones
     });
   });
 
@@ -140,11 +172,30 @@ describe('agent registry', () => {
     });
 
     it('uses current time when now is not provided', () => {
+      const now = Date.now();
       registry.upsertHeartbeat('test-agent');
-      const agents = registry.getAll();
+      const agents = registry.getAll(now);
 
       expect(agents).toHaveLength(1);
       expect(agents[0].status).toBe('online'); // Should be online since just created
+    });
+
+    it('returns agents sorted by lastSeen desc (most recent first)', () => {
+      const now = Date.now();
+
+      // Add agents in random order
+      registry.upsertHeartbeat('agent-1');
+      vi.advanceTimersByTime(1000);
+      registry.upsertHeartbeat('agent-2');
+      vi.advanceTimersByTime(1000);
+      registry.upsertHeartbeat('agent-3');
+
+      const agents = registry.getAll(now + 2000); // Use time after all heartbeats
+
+      expect(agents).toHaveLength(3);
+      expect(agents[0].id).toBe('agent-3'); // Most recent first
+      expect(agents[1].id).toBe('agent-2');
+      expect(agents[2].id).toBe('agent-1'); // Oldest last
     });
   });
 
@@ -175,8 +226,9 @@ describe('agent registry', () => {
     });
 
     it('uses current time when now is not provided', () => {
+      const now = Date.now();
       registry.upsertHeartbeat('test-agent');
-      const agent = registry.getOne('test-agent');
+      const agent = registry.getOne('test-agent', now);
 
       expect(agent).toBeDefined();
       expect(agent?.status).toBe('online'); // Should be online since just created
