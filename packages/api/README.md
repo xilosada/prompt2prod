@@ -24,6 +24,12 @@ Fetch run metadata and status:
 curl -s http://localhost:3000/runs/<id> | jq .
 ```
 
+Or without `jq` (optional):
+
+```bash
+curl -s http://localhost:3000/runs/<id>
+```
+
 Response includes: `id`, `agentId`, `repo`, `base`, `prompt`, `payload`, `status`, `createdAt`, `updatedAt`
 
 ### Logs (SSE)
@@ -69,10 +75,22 @@ List all agents with status:
 curl -s http://localhost:3000/agents | jq .
 ```
 
+Or without `jq`:
+
+```bash
+curl -s http://localhost:3000/agents
+```
+
 Get specific agent:
 
 ```bash
 curl -s http://localhost:3000/agents/<agentId> | jq .
+```
+
+Or without `jq`:
+
+```bash
+curl -s http://localhost:3000/agents/<agentId>
 ```
 
 **Status policy** (defaults): **online** ≤15s, **stale** ≤60s, **offline** otherwise.
@@ -93,7 +111,14 @@ curl -s -X POST http://localhost:3000/__test/agents/qa-agent/heartbeat \
   -d '{"caps":{"lang":"node"}}'
 ```
 
-> Dev endpoints are **disabled by default** and should not be enabled in prod.
+> **Never enable `ENABLE_TEST_ENDPOINTS=1` in production.** Test routes bypass auth and are intended for CI only.
+
+Verify test endpoints are disabled by default:
+
+```bash
+curl -s http://localhost:3000/__test/agents/test/heartbeat
+# Expected: 404 Not Found
+```
 
 ### Health Check
 
@@ -101,15 +126,23 @@ curl -s -X POST http://localhost:3000/__test/agents/qa-agent/heartbeat \
 curl -s http://localhost:3000/health | jq .
 ```
 
+Or without `jq`:
+
+```bash
+curl -s http://localhost:3000/health
+```
+
 Returns system status including agent registry configuration.
 
 ## Environment Variables
 
 - `PORT` (default 3000)
-- `GITHUB_TOKEN` (for GitHub PRs)
+- `GITHUB_TOKEN` (for GitHub PRs) - requires **repo** scope (private repos too)
 - `AGENTS_ONLINE_MS`, `AGENTS_STALE_MS` — override status thresholds for CI
 - Bus selection (if using NATS): `BUS_DRIVER=nats`, `NATS_URL=...`
 - `ENABLE_TEST_ENDPOINTS=1` — enable test-only endpoints (dev only)
+
+> **Security**: Store `GITHUB_TOKEN` in Actions secrets or local environment variables, never commit it to version control.
 
 ## Agent Registry
 

@@ -6,11 +6,20 @@ A TypeScript monorepo for orchestrating AI agents that can create, modify, and s
 
 prompt2prod is a platform that enables AI agents to work on code repositories by providing a complete workflow from task assignment to pull request creation. Agents receive work items, process them, and can automatically generate patches that get applied to repositories and submitted as PRs. The system includes real-time monitoring, agent heartbeats, and both local and GitHub integration.
 
+## Prerequisites
+
+| Tool       | Version | Notes          |
+| ---------- | ------- | -------------- |
+| Node       | ≥ 20    | required       |
+| pnpm       | 10.x    | workspace      |
+| TypeScript | 5.x     | pinned in repo |
+| Playwright | latest  | CI installs    |
+
 ## Packages
 
-- **[API](packages/api/README.md)** — Fastify server with endpoints for runs, logs/SSE, agents, compose PR, and test-only routes
-- **[SDK Agent Node](packages/sdk-agent-node/README.md)** — Node.js SDK for creating agents that can receive work, publish logs, and submit patches
-- **[Web UI](packages/web/README.md)** — React interface for monitoring runs, agents, and managing the system
+- **[API](./packages/api/README.md)** — Fastify server with endpoints for runs, logs/SSE, agents, compose PR, and test-only routes
+- **[SDK Agent Node](./packages/sdk-agent-node/README.md)** — Node.js SDK for creating agents that can receive work, publish logs, and submit patches
+- **[Web UI](./packages/web/README.md)** — React interface for monitoring runs, agents, and managing the system
 
 ## Quickstart (local)
 
@@ -85,6 +94,8 @@ curl -s -X POST http://localhost:3000/runs/demo/pr/compose \
     }
   }"
 ```
+
+> **Security**: Store `GITHUB_TOKEN` in Actions secrets or local environment variables, never commit it to version control. The token requires **repo** scope (for both public and private repositories).
 
 ## CI Overview
 

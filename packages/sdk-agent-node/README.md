@@ -105,8 +105,8 @@ async function main() {
   // Graceful shutdown
   process.on('SIGINT', async () => {
     console.log('Shutting down...');
-    hb.stop();
-    await agent.close();
+    hb.stop(); // Clear heartbeat interval
+    await agent.close?.(); // Close transport if supported
     process.exit(0);
   });
 }
@@ -154,6 +154,14 @@ client.heartbeat({
   },
 });
 ```
+
+## Agent Status
+
+The API computes agent status based on heartbeat frequency:
+
+- **online**: last heartbeat ≤ 15 seconds ago
+- **stale**: last heartbeat 15-60 seconds ago
+- **offline**: last heartbeat > 60 seconds ago or never seen
 
 ## Environment Variables
 

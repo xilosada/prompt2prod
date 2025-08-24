@@ -107,6 +107,20 @@ If you experience frequent SSE disconnections:
 - **Port Conflicts**: Ensure ports 5173 (web) and 3000 (API) are available
 - **Dependencies**: Run `pnpm install` if you see module resolution errors
 
+### Windows Tips
+
+On Windows, you may need to use PowerShell or WSL for some commands:
+
+```powershell
+# PowerShell alternative to curl -N
+Invoke-WebRequest -Uri "http://localhost:3000/runs/<id>/logs/stream" -UseBasicParsing
+
+# PowerShell JSON quoting (use single quotes for outer, double for inner)
+curl -X POST http://localhost:3000/runs -H 'content-type: application/json' -d '{"agentId":"test","repo":"org/repo","base":"main","prompt":"hello"}'
+```
+
+For the best experience, consider using WSL (Windows Subsystem for Linux) for development.
+
 ## Build & Test
 
 ```bash
