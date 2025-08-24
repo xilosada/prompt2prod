@@ -4,8 +4,8 @@ export interface CachedRun {
   addedAt: string;
 }
 
-const RUNS_KEY = 'prompt2prod_runs';
-const SELECTED_RUN_KEY = 'prompt2prod_selected_run';
+const RUNS_KEY = 'p2p.v1.runs';
+const SELECTED_RUN_KEY = 'p2p.v1.selected_run';
 const MAX_RUNS = 100;
 
 export function getCachedRuns(): CachedRun[] {

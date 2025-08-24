@@ -4,12 +4,13 @@ import { emitTestLog } from '../api';
 interface RunLogsProps {
   runId: string;
   className?: string;
+  onConnectionChange?: (connected: boolean, paused: boolean) => void;
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
 const MAX_LINES = 1000;
 
-export function RunLogs({ runId, className = '' }: RunLogsProps) {
+export function RunLogs({ runId, className = '', onConnectionChange }: RunLogsProps) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
@@ -37,6 +38,7 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
       setConnecting(false);
       setReconnectAttempts(0);
       setShowReconnectBanner(false);
+      onConnectionChange?.(true, paused);
     };
 
     es.onmessage = (ev) => {
@@ -59,6 +61,7 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
       es.close();
       setConnected(false);
       setConnecting(false);
+      onConnectionChange?.(false, paused);
 
       // Only attempt reconnect if user didn't manually disconnect
       if (!userDisconnectedRef.current && reconnectAttempts < 3) {
@@ -89,9 +92,16 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
     setConnecting(false);
     setReconnectAttempts(0);
     setShowReconnectBanner(false);
-  }, []);
+    onConnectionChange?.(false, paused);
+  }, [onConnectionChange, paused]);
 
   const clear = () => setLines([]);
+
+  const handlePauseToggle = () => {
+    const newPaused = !paused;
+    setPaused(newPaused);
+    onConnectionChange?.(connected, newPaused);
+  };
 
   const handleEmitTest = async () => {
     if (!runId.trim()) return;
@@ -141,6 +151,7 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
               onClick={connect}
               disabled={connecting}
               className="rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="connect-btn"
             >
               {connecting ? 'Connecting...' : 'Connect'}
             </button>
@@ -148,6 +159,7 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
             <button
               onClick={disconnect}
               className="rounded-lg bg-rose-600 px-3 py-2 text-sm hover:bg-rose-500"
+              data-testid="disconnect-btn"
             >
               Disconnect
             </button>
@@ -159,7 +171,7 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
             Clear
           </button>
           <button
-            onClick={() => setPaused(!paused)}
+            onClick={handlePauseToggle}
             className={`rounded-lg px-3 py-2 text-sm border ${
               paused
                 ? 'bg-orange-600 border-orange-500 text-orange-100'
@@ -168,18 +180,21 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
           >
             {paused ? 'Resume' : 'Pause'}
           </button>
-          <button
-            onClick={handleEmitTest}
-            disabled={isEmitting}
-            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm hover:bg-emerald-500 disabled:opacity-50"
-            title="POST /runs/:id/logs/test"
-          >
-            {isEmitting ? 'Emitting...' : 'Emit test'}
-          </button>
+          {import.meta.env.VITE_HIDE_DEV_TOOLS !== 'true' && (
+            <button
+              onClick={handleEmitTest}
+              disabled={isEmitting}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm hover:bg-emerald-500 disabled:opacity-50"
+              title="POST /runs/:id/logs/test"
+              data-testid="emit-test-btn"
+            >
+              {isEmitting ? 'Emitting...' : 'Emit test'}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="text-sm text-slate-400">
+      <div className="text-sm text-slate-400" data-testid="connection-status">
         {connected ? 'Connected' : 'Disconnected'} • API: {API_BASE}
         {paused && ' • Paused'}
       </div>
@@ -189,15 +204,20 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
           {connected ? 'No logs received yet' : 'Connect to stream logs'}
         </div>
       ) : (
-        <pre
-          className="rounded-xl bg-black/40 border border-slate-800 p-4 max-h-[60dvh] overflow-auto text-sm leading-6"
+        <div
+          role="log"
           aria-live="polite"
-          aria-label="Run logs"
+          aria-relevant="additions"
+          aria-atomic="false"
+          className="rounded-xl bg-black/40 border border-slate-800 p-4 max-h-[60dvh] overflow-auto text-sm leading-6 font-mono"
+          data-testid="log-container"
         >
           {lines.map((l, i) => (
-            <span key={i}>{l}\n</span>
+            <div key={i} data-testid="log-line" className="whitespace-pre-wrap">
+              {l}
+            </div>
           ))}
-        </pre>
+        </div>
       )}
     </div>
   );

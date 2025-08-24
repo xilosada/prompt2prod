@@ -13,6 +13,12 @@ export function App() {
   const [selectedRun, setSelectedRun] = useState<Run | null>(null);
   const [isLoadingRun, setIsLoadingRun] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; paused: boolean }>(
+    {
+      connected: false,
+      paused: false,
+    },
+  );
 
   // Load selected run ID from localStorage on mount
   useEffect(() => {
@@ -111,7 +117,9 @@ export function App() {
                     {/* Run header */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-xl font-semibold font-mono">{selectedRun.id}</h2>
+                        <h2 className="text-xl font-semibold font-mono" data-testid="run-id">
+                          {selectedRun.id}
+                        </h2>
                         <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
                           <span>Agent: {selectedRun.agentId}</span>
                           <StatusChip status={selectedRun.status} />
@@ -120,7 +128,12 @@ export function App() {
                     </div>
 
                     {/* Logs */}
-                    <RunLogs runId={selectedRun.id} />
+                    <RunLogs
+                      runId={selectedRun.id}
+                      onConnectionChange={(connected, paused) =>
+                        setConnectionStatus({ connected, paused })
+                      }
+                    />
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -142,7 +155,11 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-slate-800 bg-slate-900/50 mt-8">
         <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="text-xs text-slate-400">API: {API_BASE} • prompt2prod v0.1.0</div>
+          <div className="text-xs text-slate-400">
+            API: {API_BASE} • Status: {connectionStatus.connected ? 'Connected' : 'Disconnected'}
+            {connectionStatus.paused && ' • Paused'}
+            {' • prompt2prod v0.1.0'}
+          </div>
         </div>
       </footer>
     </div>

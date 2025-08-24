@@ -143,7 +143,10 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Payload (JSON)</label>
+          <label className="block text-sm font-medium mb-2">
+            Payload (JSON)
+            <span className="ml-1 text-xs text-slate-500 font-mono">JSON</span>
+          </label>
           <textarea
             value={payload}
             onChange={(e) => handlePayloadChange(e.target.value)}
@@ -152,9 +155,14 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
             className={`w-full rounded-lg bg-slate-900 border px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm ${
               jsonError ? 'border-red-500' : 'border-slate-700'
             }`}
+            title={jsonError ? `JSON Error: ${jsonError}` : 'Enter valid JSON payload'}
           />
           <p className="text-xs text-slate-400 mt-1">Optional JSON payload to send to the agent</p>
-          {jsonError && <p className="text-xs text-red-400 mt-1">{jsonError}</p>}
+          {jsonError && (
+            <p className="text-xs text-red-400 mt-1" title={`JSON Error: ${jsonError}`}>
+              {jsonError}
+            </p>
+          )}
         </div>
 
         {error && (
@@ -174,6 +182,7 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
             !!jsonError
           }
           className="w-full rounded-lg bg-indigo-600 px-4 py-2 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="create-run-submit"
         >
           {isCreating ? 'Creating...' : 'Create Run'}
         </button>
