@@ -12,6 +12,7 @@ export interface CreateTaskInput {
 export interface ListTasksOptions {
   offset?: number;
   limit?: number;
+  sort?: string;
 }
 
 export interface ListTasksResult {
@@ -23,7 +24,7 @@ export class MemoryTaskRepo {
   private tasks = new Map<string, Task>();
 
   create(input: CreateTaskInput): Task {
-    // Validate input
+    // Validate input (this is called after routes validation, but keeping as safety)
     if (!input.title || input.title.length < 1 || input.title.length > 120) {
       throw new Error('Title must be between 1 and 120 characters');
     }
@@ -59,7 +60,7 @@ export class MemoryTaskRepo {
   }
 
   list(options: ListTasksOptions = {}): ListTasksResult {
-    const { offset = 0, limit = 50 } = options;
+    const { offset = 0, limit = 50, sort = 'createdAt:desc' } = options;
 
     // Validate pagination
     if (limit < 1 || limit > 200) {
@@ -69,13 +70,22 @@ export class MemoryTaskRepo {
       throw new Error('Offset must be non-negative');
     }
 
-    // Convert to array and sort by createdAt desc (newest first)
-    // If timestamps are equal, sort by id for deterministic ordering
-    const sortedTasks = Array.from(this.tasks.values()).sort((a, b) => {
-      const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      if (timeDiff !== 0) return timeDiff;
-      return b.id.localeCompare(a.id); // Secondary sort by id (desc)
-    });
+    // Convert to array and sort based on sort parameter
+    const sortedTasks = Array.from(this.tasks.values());
+
+    if (sort === 'createdAt:desc') {
+      sortedTasks.sort((a, b) => {
+        const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.id.localeCompare(a.id); // Secondary sort by id (desc)
+      });
+    } else if (sort === 'createdAt:asc') {
+      sortedTasks.sort((a, b) => {
+        const timeDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return a.id.localeCompare(b.id); // Secondary sort by id (asc)
+      });
+    }
 
     const total = sortedTasks.length;
     const items = sortedTasks.slice(offset, offset + limit);

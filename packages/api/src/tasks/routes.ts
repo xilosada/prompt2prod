@@ -5,25 +5,22 @@ import { MemoryTaskRepo, CreateTaskInput } from './repo.memory.js';
 const createTaskSchema = {
   type: 'object',
   required: ['title', 'goal', 'targetRepo'],
+  additionalProperties: false,
   properties: {
     title: {
       type: 'string',
-      minLength: 1,
-      maxLength: 120,
     },
     goal: {
       type: 'string',
-      minLength: 1,
-      maxLength: 2000,
     },
     targetRepo: {
       type: 'string',
-      minLength: 1,
     },
     agents: {
       type: 'array',
-      items: { type: 'string' },
-      maxItems: 16,
+      items: {
+        type: 'string',
+      },
     },
     policy: {
       type: 'object',
@@ -34,6 +31,7 @@ const createTaskSchema = {
 
 const listTasksQuerySchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
     limit: {
       type: 'integer',
@@ -46,12 +44,18 @@ const listTasksQuerySchema = {
       minimum: 0,
       default: 0,
     },
+    sort: {
+      type: 'string',
+      enum: ['createdAt:desc', 'createdAt:asc'],
+      default: 'createdAt:desc',
+    },
   },
 };
 
 const getTaskParamsSchema = {
   type: 'object',
   required: ['id'],
+  additionalProperties: false,
   properties: {
     id: {
       type: 'string',
@@ -62,6 +66,7 @@ const getTaskParamsSchema = {
 
 const taskResponseSchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
     id: { type: 'string' },
     title: { type: 'string' },
@@ -77,6 +82,7 @@ const taskResponseSchema = {
     updatedAt: { type: 'string' },
     pr: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         url: { type: 'string' },
         number: { type: 'number' },
@@ -90,6 +96,7 @@ const taskResponseSchema = {
 
 const listTasksResponseSchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
     items: {
       type: 'array',
@@ -99,6 +106,82 @@ const listTasksResponseSchema = {
   },
   required: ['items', 'total'],
 };
+
+const errorResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    error: { type: 'string' },
+    details: { type: 'object', additionalProperties: true },
+  },
+  required: ['error'],
+};
+
+// Helper function to trim and clean input
+function cleanTaskInput(input: Record<string, unknown>): CreateTaskInput {
+  const cleaned = {
+    title: typeof input.title === 'string' ? input.title.trim() : '',
+    goal: typeof input.goal === 'string' ? input.goal.trim() : '',
+    targetRepo: typeof input.targetRepo === 'string' ? input.targetRepo.trim() : '',
+    agents: Array.isArray(input.agents)
+      ? input.agents
+          .filter((agent): agent is string => typeof agent === 'string')
+          .map((agent: string) => agent.trim())
+          .filter(Boolean)
+      : [],
+    policy: input.policy as Record<string, unknown> | undefined,
+  };
+
+  // Validate required fields after trimming
+  if (!cleaned.title) {
+    throw new Error('Title is required and cannot be empty after trimming');
+  }
+  if (!cleaned.goal) {
+    throw new Error('Goal is required and cannot be empty after trimming');
+  }
+  if (!cleaned.targetRepo) {
+    throw new Error('Target repository is required and cannot be empty after trimming');
+  }
+
+  // Validate targetRepo format after trimming
+  const githubSlugPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+  const fileUrlPattern = /^file:\/\/\/.+/;
+
+  if (!githubSlugPattern.test(cleaned.targetRepo) && !fileUrlPattern.test(cleaned.targetRepo)) {
+    throw new Error(
+      'Target repository must be either a GitHub slug (owner/repo) or file URL (file:///path)',
+    );
+  }
+
+  // Note: We filter out empty agent entries instead of rejecting them
+  // This allows the API to be more forgiving with input
+
+  return cleaned;
+}
+
+// Helper function to generate Link headers for pagination
+function generateLinkHeaders(
+  baseUrl: string,
+  limit: number,
+  offset: number,
+  total: number,
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (offset + limit < total) {
+    headers['Link'] = `<${baseUrl}?limit=${limit}&offset=${offset + limit}>; rel="next"`;
+  }
+
+  if (offset > 0) {
+    const prevOffset = Math.max(0, offset - limit);
+    headers['Link'] =
+      (headers['Link'] || '') +
+      (headers['Link'] ? ', ' : '') +
+      `<${baseUrl}?limit=${limit}&offset=${prevOffset}>; rel="prev"`;
+  }
+
+  return headers;
+}
 
 export async function taskRoutes(fastify: FastifyInstance) {
   const taskRepo = new MemoryTaskRepo();
@@ -111,21 +194,20 @@ export async function taskRoutes(fastify: FastifyInstance) {
         body: createTaskSchema,
         response: {
           201: taskResponseSchema,
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          400: errorResponseSchema,
         },
       },
     },
     async (request, reply) => {
       try {
-        const task = taskRepo.create(request.body as CreateTaskInput);
+        const cleanedInput = cleanTaskInput(request.body as Record<string, unknown>);
+        const task = taskRepo.create(cleanedInput);
         return reply.status(201).send(task);
       } catch (error) {
-        return reply.status(400).send({ error: (error as Error).message });
+        return reply.status(400).send({
+          error: (error as Error).message,
+          details: { field: 'validation' },
+        });
       }
     },
   );
@@ -138,22 +220,38 @@ export async function taskRoutes(fastify: FastifyInstance) {
         querystring: listTasksQuerySchema,
         response: {
           200: listTasksResponseSchema,
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          400: errorResponseSchema,
         },
       },
     },
     async (request, reply) => {
       try {
-        const { limit = 50, offset = 0 } = request.query as { limit?: number; offset?: number };
-        const result = taskRepo.list({ limit, offset });
+        const {
+          limit = 50,
+          offset = 0,
+          sort = 'createdAt:desc',
+        } = request.query as {
+          limit?: number;
+          offset?: number;
+          sort?: string;
+        };
+
+        const result = taskRepo.list({ limit, offset, sort });
+
+        // Add Link headers for pagination
+        const baseUrl = `${request.protocol}://${request.hostname}${request.url.split('?')[0]}`;
+        const linkHeaders = generateLinkHeaders(baseUrl, limit, offset, result.total);
+
+        Object.entries(linkHeaders).forEach(([key, value]) => {
+          reply.header(key, value);
+        });
+
         return reply.send(result);
       } catch (error) {
-        return reply.status(400).send({ error: (error as Error).message });
+        return reply.status(400).send({
+          error: (error as Error).message,
+          details: { field: 'pagination' },
+        });
       }
     },
   );
@@ -166,12 +264,7 @@ export async function taskRoutes(fastify: FastifyInstance) {
         params: getTaskParamsSchema,
         response: {
           200: taskResponseSchema,
-          404: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          404: errorResponseSchema,
         },
       },
     },
@@ -180,7 +273,10 @@ export async function taskRoutes(fastify: FastifyInstance) {
       const task = taskRepo.get(id);
 
       if (!task) {
-        return reply.status(404).send({ error: 'Task not found' });
+        return reply.status(404).send({
+          error: 'Task not found',
+          details: { id },
+        });
       }
 
       return reply.send(task);
