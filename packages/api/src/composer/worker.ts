@@ -17,14 +17,20 @@ export async function startComposer(app: FastifyInstance, bus: Bus, runsRepo: Ru
   const st: ComposeState = { patchByRun: new Map(), composed: new Set() };
 
   // Hook into run lifecycle similar to existing watchers: when a run is created, attach per-run subscriptions
-  const initialPolicy = loadComposePolicy();
-  app.log.info(
-    '[composer] starting; on=%s base=%s dry=%s remote=%s',
-    [...initialPolicy.onStatuses].join(','),
-    initialPolicy.base,
-    initialPolicy.dryRun ? 'true' : 'false',
-    redact(initialPolicy.remoteUrl),
-  );
+  let initialPolicy: ComposePolicy;
+  try {
+    initialPolicy = loadComposePolicy();
+    app.log.info(
+      '[composer] starting; on=%s base=%s dry=%s remote=%s',
+      [...initialPolicy.onStatuses].join(','),
+      initialPolicy.base,
+      initialPolicy.dryRun ? 'true' : 'false',
+      redact(initialPolicy.remoteUrl),
+    );
+  } catch (err) {
+    app.log.warn('[composer] failed to load policy: %s', (err as Error)?.message);
+    return; // Exit early if policy cannot be loaded
+  }
 
   // Track subscriptions per run (memory bus doesn't support wildcards)
   const runSubscriptions = new Map<string, { status: () => void; patch: () => void }>();

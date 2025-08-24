@@ -35,6 +35,21 @@ export function buildServer() {
   const repo = createMemoryRunsRepo();
   const agentRegistry = createMemoryAgentRegistry();
 
+  // Create a map to track active subscriptions
+  const agentSubscriptions = new Map<string, () => void>();
+
+  // Cleanup subscriptions on server close
+  app.addHook('onClose', async () => {
+    try {
+      for (const unsub of agentSubscriptions.values()) {
+        await unsub();
+      }
+      agentSubscriptions.clear();
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
   // Register agent routes immediately (they don't depend on bus)
   registerAgentRoutes(app, agentRegistry);
 
@@ -52,8 +67,13 @@ export function buildServer() {
     registerPrComposeRoutes(app);
 
     // Start the headless PR composer worker
-    const { startComposer } = await import('./composer/worker.js');
-    startComposer(app, bus, repo);
+    try {
+      const { startComposer } = await import('./composer/worker.js');
+      startComposer(app, bus, repo);
+    } catch (err) {
+      // Composer may fail to start if required env vars are missing
+      app.log.warn('[server] composer failed to start: %s', (err as Error)?.message);
+    }
 
     // Register dev-only run routes when enabled
     if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
@@ -65,9 +85,6 @@ export function buildServer() {
     // Note: Memory bus doesn't support wildcards, so we'll handle this differently
     // For now, we'll create a helper that can subscribe to specific agent topics
     // In a real implementation with NATS, this would use wildcards
-
-    // Create a map to track active subscriptions
-    const agentSubscriptions = new Map<string, () => void>();
 
     // Helper function to subscribe to a specific agent's heartbeat
     const subscribeToAgent = async (agentId: string) => {
@@ -95,18 +112,6 @@ export function buildServer() {
       console.log('Agent registry: Memory bus detected - manual agent subscription required');
       console.log('For production with NATS, wildcard subscriptions will be used automatically');
     }
-
-    // Cleanup subscriptions on server close
-    app.addHook('onClose', async () => {
-      try {
-        for (const unsub of agentSubscriptions.values()) {
-          await unsub();
-        }
-        agentSubscriptions.clear();
-      } catch {
-        // Ignore cleanup errors
-      }
-    });
   });
 
   return app;
