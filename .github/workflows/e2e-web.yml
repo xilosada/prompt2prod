@@ -52,16 +52,21 @@ jobs:
         run: |
           node packages/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
-          # wait for port 3000
-          for i in {1..60}; do timeout 1 bash -c "</dev/tcp/127.0.0.1/3000" && break; sleep 1; done
-          (timeout 1 bash -c "</dev/tcp/127.0.0.1/3000" && echo "API ready") || (echo "API failed to start"; cat api.log; exit 1)
+          # Wait for API to start
+          sleep 5
+          # Simple curl check to verify the server is responding
+          for i in {1..30}; do curl -s http://localhost:3000/health > /dev/null && break; sleep 2; done
+          (curl -s http://localhost:3000/health > /dev/null && echo "API ready") || (echo "API failed to start"; cat api.log; exit 1)
 
       - name: Start web preview server
         run: |
           pnpm --filter @prompt2prod/web preview -- --port 5173 > web.log 2>&1 &
           echo $! > web.pid
-          for i in {1..60}; do timeout 1 bash -c "</dev/tcp/127.0.0.1/5173" && break; sleep 1; done
-          (timeout 1 bash -c "</dev/tcp/127.0.0.1/5173" && echo "Web ready") || (echo "Web failed"; cat web.log; exit 1)
+          # Wait a bit longer for Vite to fully start
+          sleep 10
+          # Simple curl check to verify the server is responding
+          for i in {1..30}; do curl -s http://localhost:5173 > /dev/null && break; sleep 2; done
+          (curl -s http://localhost:5173 > /dev/null && echo "Web ready") || (echo "Web failed"; cat web.log; exit 1)
 
       - name: Run E2E tests
         env:
