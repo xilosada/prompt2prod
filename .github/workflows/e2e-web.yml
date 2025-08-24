@@ -47,6 +47,8 @@ jobs:
       - name: Start API server
         env:
           ENABLE_TEST_ENDPOINTS: '1'
+          AGENTS_ONLINE_MS: '1500'
+          AGENTS_STALE_MS: '4000'
         run: |
           node packages/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid

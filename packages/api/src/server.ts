@@ -40,7 +40,7 @@ export function buildServer() {
   // Register dev-only test routes when enabled
   if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
     registerAgentDevRoutes(app, agentRegistry);
-    app.log.info('[dev] Test endpoints enabled');
+    app.log.info('[dev] Test endpoints: enabled');
   }
 
   // Create the bus ONCE and register all routes that depend on it

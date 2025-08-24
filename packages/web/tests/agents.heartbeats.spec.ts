@@ -11,7 +11,7 @@ test('agents panel reflects online → stale transition', async ({ page }) => {
     headers: { 'content-type': 'application/json' },
     data: { caps: { lang: 'node', ver: 'test' } },
   });
-  expect(res.ok()).toBeTruthy();
+  expect(res.status()).toBe(204);
 
   // 2) open UI, force refresh, expect ONLINE
   await page.goto(WEB_BASE);
@@ -30,12 +30,12 @@ test('agents panel reflects online → stale transition', async ({ page }) => {
 
   await expect(page.getByTestId(`agent-status-${AGENT_ID}`)).toHaveText(/online/i);
 
-  // 3) wait > ONLINE threshold (backend uses online ≤ 15s)
-  await page.waitForTimeout(17000);
+  // 3) wait > ONLINE threshold (backend uses online ≤ 1.5s in CI)
+  await page.waitForTimeout(2000);
 
   // 4) refresh and expect STALE
   await page.getByTestId('agents-refresh').click();
   await expect(page.getByTestId(`agent-status-${AGENT_ID}`)).toHaveText(/stale/i, {
-    timeout: 15000,
+    timeout: 5000,
   });
 });

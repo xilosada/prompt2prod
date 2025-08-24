@@ -10,8 +10,8 @@ export interface AgentEntry {
 
 // Status thresholds in milliseconds - configurable via environment
 export const STATUS_THRESHOLDS = {
-  ONLINE_TTL: parseInt(process.env.AGENT_ONLINE_TTL_MS ?? '15000'), // 15 seconds default
-  STALE_TTL: parseInt(process.env.AGENT_STALE_TTL_MS ?? '60000'), // 60 seconds default
+  ONLINE_TTL: parseInt(process.env.AGENTS_ONLINE_MS ?? process.env.AGENT_ONLINE_TTL_MS ?? '15000'), // 15 seconds default
+  STALE_TTL: parseInt(process.env.AGENTS_STALE_MS ?? process.env.AGENT_STALE_TTL_MS ?? '60000'), // 60 seconds default
 } as const;
 
 // Validate thresholds
