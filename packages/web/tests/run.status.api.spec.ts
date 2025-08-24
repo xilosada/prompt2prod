@@ -17,7 +17,7 @@ test('test-only run status endpoints work correctly', async () => {
   const getInitial = await api.get(`${API_BASE}/runs/${id}`);
   expect(getInitial.ok()).toBeTruthy();
   const initialRun = await getInitial.json();
-  expect(initialRun.status).toBe('dispatched'); // Should be dispatched initially
+  expect(initialRun.status).toBe('queued'); // Should be queued initially
 
   // 3) Set status to running via test-only route
   const setRunning = await api.post(`${API_BASE}/__test/runs/${id}/status/running`);

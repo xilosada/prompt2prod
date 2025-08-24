@@ -187,6 +187,8 @@ npx playwright install
 pnpm test:e2e
 ```
 
+**Note**: The run status e2e tests require `ENABLE_TEST_ENDPOINTS=1` to be set on the API server to enable the test-only status endpoints.
+
 ## Architecture
 
 - **React 18**: Modern React with hooks and functional components

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Run, getRun, type RunStatus, formatRelative } from './api';
+import { Run, getRun, formatRelative } from './api';
+import type { RunStatus } from '@prompt2prod/shared';
 import {
   getSelectedRunId,
   setSelectedRunId,

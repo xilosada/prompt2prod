@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import type { Bus } from '../bus/Bus.js';
 import { topics } from '../bus/topics.js';
 import type { RunsRepo } from './repo.memory.js';
+import type { RunStatus } from '@prompt2prod/shared';
 
 export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: RunsRepo }) {
   // TODO: Consider exposing last error/reason on GET /runs/:id when state=error|canceled
@@ -72,7 +73,7 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
 
       // 2) status updates via runs.<id>.status
       statusUnsub = await deps.bus.subscribe<{
-        state: 'queued' | 'running' | 'done' | 'error' | 'canceled';
+        state: RunStatus;
         detail?: unknown;
       }>(topics.runStatus(id), async (msg) => {
         if (msg?.state) {
@@ -93,7 +94,7 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
           prompt: body.prompt,
           payload: body.payload,
         });
-        deps.repo.setStatus(id, 'dispatched');
+        deps.repo.setStatus(id, 'queued');
         reply.code(201).send({ id });
       } catch {
         deps.repo.setStatus(id, 'error');
