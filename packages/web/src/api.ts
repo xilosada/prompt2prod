@@ -1,5 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
 
+// Agent types
+export type AgentStatus = 'online' | 'stale' | 'offline';
+export type AgentView = { id: string; lastSeen: number; status: AgentStatus; caps?: Record<string, unknown> };
+
 export interface CreateRunRequest {
   agentId: string;
   repo: string;
@@ -53,4 +57,21 @@ export async function emitTestLog(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error(`Failed to emit test log: ${response.statusText}`);
   }
+}
+
+// Agent API functions
+export async function getAgents(): Promise<AgentView[]> {
+  const res = await fetch(`${API_BASE}/agents`);
+  if (!res.ok) throw new Error(`getAgents failed: ${res.status}`);
+  const data = await res.json();
+  return data.agents;
+}
+
+export function formatRelative(msEpoch: number): string {
+  const s = Math.max(0, Math.floor((Date.now() - msEpoch) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
 }

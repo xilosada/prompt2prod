@@ -6,13 +6,20 @@ interface RunListProps {
   selectedRunId: string | null;
   onSelectRun: (id: string) => void;
   onImportRun: (run: CachedRun) => void;
+  agentFilterId: string | null;
+  clearAgentFilter: () => void;
 }
 
-export function RunList({ selectedRunId, onSelectRun, onImportRun }: RunListProps) {
+export function RunList({ selectedRunId, onSelectRun, onImportRun, agentFilterId, clearAgentFilter }: RunListProps) {
   const [importId, setImportId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const cachedRuns = getCachedRuns();
+
+  // Filter runs by agent if agentFilterId is set
+  const filteredRuns = agentFilterId 
+    ? cachedRuns.filter(run => run.agentId === agentFilterId)
+    : cachedRuns;
 
   const handleImport = async () => {
     const trimmedId = importId.trim();
@@ -41,6 +48,21 @@ export function RunList({ selectedRunId, onSelectRun, onImportRun }: RunListProp
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold mb-3">Runs</h2>
+
+        {/* Agent filter pill */}
+        {agentFilterId && (
+          <div className="flex items-center gap-2 mb-3 p-2 bg-indigo-900/20 border border-indigo-700 rounded-lg">
+            <span className="text-sm text-indigo-300">Filtered by agent:</span>
+            <span className="text-sm font-mono text-indigo-200">{agentFilterId}</span>
+            <button
+              onClick={clearAgentFilter}
+              className="ml-auto text-indigo-400 hover:text-indigo-200 text-sm"
+              data-testid="clear-agent-filter"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Import by ID */}
         <div className="space-y-2 mb-4">
@@ -71,13 +93,17 @@ export function RunList({ selectedRunId, onSelectRun, onImportRun }: RunListProp
 
       {/* Runs list */}
       <div className="space-y-2">
-        {cachedRuns.length === 0 ? (
+        {filteredRuns.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-slate-400 mb-2">No runs yet</div>
-            <div className="text-sm text-slate-500">Create a run to get started</div>
+            <div className="text-slate-400 mb-2">
+              {agentFilterId ? 'No runs for agent' : 'No runs yet'}
+            </div>
+            <div className="text-sm text-slate-500">
+              {agentFilterId ? 'This agent has no runs' : 'Create a run to get started'}
+            </div>
           </div>
         ) : (
-          cachedRuns.map((run) => (
+          filteredRuns.map((run) => (
             <button
               key={run.id}
               onClick={() => onSelectRun(run.id)}
