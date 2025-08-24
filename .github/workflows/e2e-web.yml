@@ -53,15 +53,15 @@ jobs:
           node packages/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
           # wait for port 3000
-          for i in {1..60}; do nc -z 127.0.0.1 3000 && break; sleep 1; done
-          (nc -z 127.0.0.1 3000 && echo "API ready") || (echo "API failed to start"; cat api.log; exit 1)
+          for i in {1..60}; do timeout 1 bash -c "</dev/tcp/127.0.0.1/3000" && break; sleep 1; done
+          (timeout 1 bash -c "</dev/tcp/127.0.0.1/3000" && echo "API ready") || (echo "API failed to start"; cat api.log; exit 1)
 
       - name: Start web preview server
         run: |
           pnpm --filter @prompt2prod/web preview -- --port 5173 > web.log 2>&1 &
           echo $! > web.pid
-          for i in {1..60}; do nc -z 127.0.0.1 5173 && break; sleep 1; done
-          (nc -z 127.0.0.1 5173 && echo "Web ready") || (echo "Web failed"; cat web.log; exit 1)
+          for i in {1..60}; do timeout 1 bash -c "</dev/tcp/127.0.0.1/5173" && break; sleep 1; done
+          (timeout 1 bash -c "</dev/tcp/127.0.0.1/5173" && echo "Web ready") || (echo "Web failed"; cat web.log; exit 1)
 
       - name: Run E2E tests
         env:
