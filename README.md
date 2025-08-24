@@ -130,6 +130,30 @@ Fetch run metadata:
 curl -s http://localhost:3000/runs/<uuid>
 ```
 
+## API — Agents
+
+The API maintains an in-memory registry of agents based on heartbeat messages. Agent status is computed dynamically:
+
+- **online**: last heartbeat ≤ 15 seconds ago
+- **stale**: last heartbeat 15-60 seconds ago
+- **offline**: last heartbeat > 60 seconds ago or never seen
+
+### List all agents
+
+```bash
+curl -s http://localhost:3000/agents
+# → [{"id":"agent-1","lastSeen":1703123456789,"status":"online","caps":{"feature":"test"}}]
+```
+
+### Get specific agent
+
+```bash
+curl -s http://localhost:3000/agents/agent-1
+# → {"id":"agent-1","lastSeen":1703123456789,"status":"online","caps":{"feature":"test"}}
+```
+
+Returns 404 if agent not found.
+
 ### Run Lifecycle
 
 Runs automatically transition through statuses via bus messages:
