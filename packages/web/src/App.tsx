@@ -106,10 +106,7 @@ export function App() {
             <div className="space-y-6">
               {/* Agents Panel */}
               <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-                <AgentsPanel
-                  selectedAgentId={selectedAgentId}
-                  onSelectAgent={handleSelectAgent}
-                />
+                <AgentsPanel selectedAgentId={selectedAgentId} onSelectAgent={handleSelectAgent} />
               </div>
 
               {/* Runs Panel */}

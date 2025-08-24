@@ -10,15 +10,21 @@ interface RunListProps {
   clearAgentFilter: () => void;
 }
 
-export function RunList({ selectedRunId, onSelectRun, onImportRun, agentFilterId, clearAgentFilter }: RunListProps) {
+export function RunList({
+  selectedRunId,
+  onSelectRun,
+  onImportRun,
+  agentFilterId,
+  clearAgentFilter,
+}: RunListProps) {
   const [importId, setImportId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const cachedRuns = getCachedRuns();
 
   // Filter runs by agent if agentFilterId is set
-  const filteredRuns = agentFilterId 
-    ? cachedRuns.filter(run => run.agentId === agentFilterId)
+  const filteredRuns = agentFilterId
+    ? cachedRuns.filter((run) => run.agentId === agentFilterId)
     : cachedRuns;
 
   const handleImport = async () => {

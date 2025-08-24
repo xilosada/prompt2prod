@@ -2,7 +2,12 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
 
 // Agent types
 export type AgentStatus = 'online' | 'stale' | 'offline';
-export type AgentView = { id: string; lastSeen: number; status: AgentStatus; caps?: Record<string, unknown> };
+export type AgentView = {
+  id: string;
+  lastSeen: number;
+  status: AgentStatus;
+  caps?: Record<string, unknown>;
+};
 
 export interface CreateRunRequest {
   agentId: string;

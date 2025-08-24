@@ -10,7 +10,7 @@ test.describe('Agents Panel E2E', () => {
 
     // Wait up to 20s for at least one agent OR skip with a message if none
     const agentItem = page.getByTestId(/^agent-item-/);
-    
+
     try {
       await agentItem.first().waitFor({ timeout: 20000 });
     } catch {
@@ -33,7 +33,9 @@ test.describe('Agents Panel E2E', () => {
 
     // Verify runs list shows only matching runs (or empty state)
     // Note: We can't guarantee there are runs for this agent, so we just check the filter is applied
-    const runsList = page.locator('[data-testid="runs-list"]').or(page.locator('text=No runs for agent'));
+    const runsList = page
+      .locator('[data-testid="runs-list"]')
+      .or(page.locator('text=No runs for agent'));
     await expect(runsList).toBeVisible();
 
     // Click Clear filter and assert pill disappears
@@ -52,7 +54,7 @@ test.describe('Agents Panel E2E', () => {
     const refreshButton = page.getByTestId('agents-refresh');
     await expect(refreshButton).toBeVisible();
     await refreshButton.click();
-    
+
     // The button should remain visible and functional
     await expect(refreshButton).toBeVisible();
   });

@@ -87,12 +87,10 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="font-mono text-sm truncate">{agent.id}</div>
-                      <div className="text-xs text-slate-400">
-                        {formatRelative(agent.lastSeen)}
-                      </div>
+                      <div className="text-xs text-slate-400">{formatRelative(agent.lastSeen)}</div>
                     </div>
-                    <StatusChip 
-                      status={agent.status} 
+                    <StatusChip
+                      status={agent.status}
                       className="ml-2 flex-shrink-0"
                       data-testid={`agent-status-${agent.id}`}
                     />

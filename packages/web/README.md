@@ -144,6 +144,7 @@ If the agents panel shows "No agents — is any agent heartbeating?":
 4. **Network Issues**: Check for network connectivity between agent and API server
 
 Example agent heartbeat (using SDK):
+
 ```javascript
 import { createAgent } from '@prompt2prod/sdk-agent-node';
 
