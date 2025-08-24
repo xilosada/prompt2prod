@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getAgents, formatRelative, type AgentView } from '../api';
 import { StatusChip } from './StatusChip';
 
@@ -11,30 +11,57 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
   const [agents, setAgents] = useState<AgentView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const alive = useRef(true);
+  const abortController = useRef<AbortController | null>(null);
 
   const fetchAgents = async () => {
+    if (!alive.current) return;
+
     setIsLoading(true);
     setError(null);
+
+    // Cancel any ongoing request
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortController.current = new AbortController();
+
     try {
-      const agentsData = await getAgents();
+      const agentsData = await getAgents(abortController.current.signal);
+      if (!alive.current) return; // Check again after async operation
       setAgents(agentsData);
     } catch (err) {
+      if (!alive.current) return; // Check again after async operation
+
+      // Don't set error for aborted requests
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+
       setError(err instanceof Error ? err.message : 'Failed to fetch agents');
       console.error('Failed to fetch agents:', err);
     } finally {
+      if (!alive.current) return; // Check again before setting loading state
       setIsLoading(false);
     }
   };
 
-  // Initial fetch
+  // Initial fetch and polling setup
   useEffect(() => {
-    fetchAgents();
-  }, []);
+    alive.current = true;
 
-  // Poll every 10 seconds
-  useEffect(() => {
     const interval = setInterval(fetchAgents, 10000);
-    return () => clearInterval(interval);
+    fetchAgents(); // Initial fetch
+
+    return () => {
+      alive.current = false;
+      clearInterval(interval);
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+    };
   }, []);
 
   const handleAgentClick = (agentId: string) => {
@@ -44,6 +71,26 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
       onSelectAgent(agentId);
     }
   };
+
+  const handleKeyDown = (event: React.KeyboardEvent, agentId: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleAgentClick(agentId);
+    }
+  };
+
+  // Sort agents by status (online → stale → offline), then by lastSeen desc
+  const sortedAgents = [...agents].sort((a, b) => {
+    const statusOrder = { online: 0, stale: 1, offline: 2 };
+    const aOrder = statusOrder[a.status];
+    const bOrder = statusOrder[b.status];
+
+    if (aOrder !== bOrder) {
+      return aOrder - bOrder;
+    }
+
+    return b.lastSeen - a.lastSeen; // desc
+  });
 
   return (
     <div className="space-y-4" data-testid="agents-panel">
@@ -66,17 +113,21 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
       )}
 
       <div className="space-y-2">
-        {agents.length === 0 ? (
+        {sortedAgents.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-slate-400 mb-1">No agents</div>
             <div className="text-xs text-slate-500">Is any agent heartbeating?</div>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {agents.map((agent) => (
+          <ul className="space-y-2" role="listbox">
+            {sortedAgents.map((agent) => (
               <li key={agent.id}>
                 <button
                   onClick={() => handleAgentClick(agent.id)}
+                  onKeyDown={(e) => handleKeyDown(e, agent.id)}
+                  role="button"
+                  aria-pressed={selectedAgentId === agent.id}
+                  tabIndex={0}
                   className={`w-full text-left p-3 rounded-lg border transition-colors ${
                     selectedAgentId === agent.id
                       ? 'bg-indigo-600/20 border-indigo-500 text-indigo-100'

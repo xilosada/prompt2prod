@@ -65,8 +65,8 @@ export async function emitTestLog(id: string): Promise<void> {
 }
 
 // Agent API functions
-export async function getAgents(): Promise<AgentView[]> {
-  const res = await fetch(`${API_BASE}/agents`);
+export async function getAgents(signal?: AbortSignal): Promise<AgentView[]> {
+  const res = await fetch(`${API_BASE}/agents`, { signal });
   if (!res.ok) throw new Error(`getAgents failed: ${res.status}`);
   const data = await res.json();
   return data.agents;

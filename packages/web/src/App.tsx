@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Run } from './api';
-import { getSelectedRunId, setSelectedRunId, CachedRun } from './lib/localStore';
+import {
+  getSelectedRunId,
+  setSelectedRunId,
+  getSelectedAgentId,
+  setSelectedAgentId,
+  CachedRun,
+} from './lib/localStore';
 import { copyToClipboard } from './lib/clipboard';
 import { RunList } from './components/RunList';
 import { RunLogs } from './components/RunLogs';
@@ -16,7 +22,7 @@ export function App() {
   const [isLoadingRun, setIsLoadingRun] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentIdState] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; paused: boolean }>(
     {
       connected: false,
@@ -24,11 +30,16 @@ export function App() {
     },
   );
 
-  // Load selected run ID from localStorage on mount
+  // Load selected run ID and agent ID from localStorage on mount
   useEffect(() => {
     const savedRunId = getSelectedRunId();
     if (savedRunId) {
       setSelectedRunIdState(savedRunId);
+    }
+
+    const savedAgentId = getSelectedAgentId();
+    if (savedAgentId) {
+      setSelectedAgentIdState(savedAgentId);
     }
   }, []);
 
@@ -81,10 +92,12 @@ export function App() {
   };
 
   const handleSelectAgent = (agentId: string | null) => {
+    setSelectedAgentIdState(agentId);
     setSelectedAgentId(agentId);
   };
 
   const handleClearAgentFilter = () => {
+    setSelectedAgentIdState(null);
     setSelectedAgentId(null);
   };
 
@@ -205,7 +218,8 @@ export function App() {
           <div className="text-xs text-slate-400">
             API: {API_BASE} • Status: {connectionStatus.connected ? 'Connected' : 'Disconnected'}
             {connectionStatus.paused && ' • Paused'}
-            {selectedAgentId && ` • Agent filter: ${selectedAgentId}`}
+            {' • Agent filter: '}
+            {selectedAgentId ? selectedAgentId : 'None'}
             {' • prompt2prod v0.1.0'}
           </div>
         </div>

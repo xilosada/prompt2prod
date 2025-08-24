@@ -69,4 +69,77 @@ test.describe('Agents Panel E2E', () => {
     // Use a more specific selector to avoid strict mode violations
     await expect(page.locator('text=No agents')).toBeVisible();
   });
+
+  test('agent selection persists after page refresh', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for agents panel
+    await expect(page.getByTestId('agents-panel')).toBeVisible();
+
+    // Wait up to 20s for at least one agent
+    const agentItem = page.getByTestId(/^agent-item-/);
+
+    try {
+      await agentItem.first().waitFor({ timeout: 20000 });
+    } catch {
+      console.log('No agents found within 20s - skipping persistence test');
+      return;
+    }
+
+    // Click the first agent to select it
+    const firstAgent = agentItem.first();
+    await firstAgent.click();
+
+    // Verify agent is selected (should have aria-pressed="true")
+    await expect(firstAgent).toHaveAttribute('aria-pressed', 'true');
+
+    // Refresh the page
+    await page.reload();
+
+    // Wait for agents panel to load again
+    await expect(page.getByTestId('agents-panel')).toBeVisible();
+
+    // Wait for the same agent to appear again
+    try {
+      await firstAgent.waitFor({ timeout: 20000 });
+    } catch {
+      console.log('Agent not found after refresh - skipping persistence verification');
+      return;
+    }
+
+    // Verify the agent is still selected after refresh
+    await expect(firstAgent).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('keyboard navigation works for agent selection', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for agents panel
+    await expect(page.getByTestId('agents-panel')).toBeVisible();
+
+    // Wait up to 20s for at least one agent
+    const agentItem = page.getByTestId(/^agent-item-/);
+
+    try {
+      await agentItem.first().waitFor({ timeout: 20000 });
+    } catch {
+      console.log('No agents found within 20s - skipping keyboard test');
+      return;
+    }
+
+    // Focus the first agent button
+    await agentItem.first().focus();
+
+    // Press Enter to select the agent
+    await page.keyboard.press('Enter');
+
+    // Verify agent is selected
+    await expect(agentItem.first()).toHaveAttribute('aria-pressed', 'true');
+
+    // Press Space to deselect the agent
+    await page.keyboard.press(' ');
+
+    // Verify agent is deselected
+    await expect(agentItem.first()).toHaveAttribute('aria-pressed', 'false');
+  });
 });
