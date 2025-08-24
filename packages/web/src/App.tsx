@@ -68,20 +68,23 @@ export function App() {
       });
   }, [selectedRunId]);
 
-  const refreshRunStatus = useCallback(async (signal?: AbortSignal) => {
-    if (!selectedRunId) return;
+  const refreshRunStatus = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!selectedRunId) return;
 
-    try {
-      const run = await getRun(selectedRunId, signal);
-      setRunStatus(run.status);
-      setLastUpdated(Date.now());
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Failed to refresh run status:', error);
+      try {
+        const run = await getRun(selectedRunId, signal);
+        setRunStatus(run.status);
+        setLastUpdated(Date.now());
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to refresh run status:', error);
+        }
+        throw error;
       }
-      throw error;
-    }
-  }, [selectedRunId]);
+    },
+    [selectedRunId],
+  );
 
   // Poll run status every 5 seconds
   useEffect(() => {
