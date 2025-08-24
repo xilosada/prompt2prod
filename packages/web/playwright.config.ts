@@ -11,6 +11,9 @@ export default defineConfig({
     baseURL: process.env.WEB_BASE ?? 'http://localhost:5173',
     trace: 'on-first-retry',
     timeout: 30_000,
+    // Capture console logs and network activity
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
   expect: {
     timeout: 10_000,

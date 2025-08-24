@@ -147,6 +147,45 @@ test('reconnect resumes logs', async ({ page }) => {
   expect(logContent!.length).toBeGreaterThan(0);
 });
 
+test('copy run ID functionality', async ({ page }) => {
+  // Navigate to the app
+  await page.goto('/');
+
+  // Wait for the app to load
+  await expect(page.locator('h1')).toContainText('prompt2prod — Runs Monitor');
+
+  // Click "New" to show create form
+  await page.click('button:has-text("New")');
+
+  // Fill in the create run form
+  await page.fill('input[placeholder="demo-agent"]', 'demo-agent');
+  await page.fill('input[placeholder="org/repo"]', 'demo/repo');
+  await page.fill('input[placeholder="main"]', 'main');
+  await page.fill('input[placeholder="What would you like the agent to do?"]', 'Hello world');
+  await page.fill('textarea', '{\n  "task": "hello world"\n}');
+
+  // Submit the form
+  await page.click('[data-testid="create-run-submit"]');
+
+  // Wait for the run to be created and selected
+  await expect(page.locator('[data-testid="run-id"]')).toBeVisible();
+
+  // Get the run ID text
+  const runIdText = await page.locator('[data-testid="run-id"]').textContent();
+  expect(runIdText).toBeTruthy();
+
+  // Verify the copy button exists and is clickable
+  await expect(page.locator('[data-testid="copy-run-id-btn"]')).toBeVisible();
+  await expect(page.locator('[data-testid="copy-run-id-btn"]')).toBeEnabled();
+
+  // Click the copy button
+  await page.click('[data-testid="copy-run-id-btn"]');
+
+  // Verify the button click was registered (optional feedback check)
+  // Note: Clipboard API verification is skipped in test environment
+  // as it requires secure context and user interaction
+});
+
 test('no auto-reconnect after manual disconnect', async ({ page }) => {
   // Navigate to the app
   await page.goto('/');

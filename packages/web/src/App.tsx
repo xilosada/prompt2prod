@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Run } from './api';
 import { getSelectedRunId, setSelectedRunId, CachedRun } from './lib/localStore';
+import { copyToClipboard } from './lib/clipboard';
 import { RunList } from './components/RunList';
 import { RunLogs } from './components/RunLogs';
 import { RunCreateForm } from './components/RunCreateForm';
@@ -13,6 +14,7 @@ export function App() {
   const [selectedRun, setSelectedRun] = useState<Run | null>(null);
   const [isLoadingRun, setIsLoadingRun] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; paused: boolean }>(
     {
       connected: false,
@@ -66,6 +68,16 @@ export function App() {
     setShowCreateForm(false);
   };
 
+  const handleCopyRunId = async () => {
+    if (!selectedRun) return;
+
+    const success = await copyToClipboard(selectedRun.id);
+    setCopyFeedback(success ? 'Copied!' : 'Failed to copy');
+
+    // Clear feedback after 2 seconds
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
+
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/50">
@@ -116,10 +128,25 @@ export function App() {
                   <div className="space-y-6">
                     {/* Run header */}
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-xl font-semibold font-mono" data-testid="run-id">
-                          {selectedRun.id}
-                        </h2>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h2 className="text-xl font-semibold font-mono" data-testid="run-id">
+                            {selectedRun.id}
+                          </h2>
+                          <button
+                            onClick={handleCopyRunId}
+                            className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700 border border-slate-700 transition-colors"
+                            title="Copy run ID to clipboard"
+                            data-testid="copy-run-id-btn"
+                          >
+                            Copy ID
+                          </button>
+                          {copyFeedback && (
+                            <span className="text-xs text-emerald-400 animate-pulse">
+                              {copyFeedback}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
                           <span>Agent: {selectedRun.agentId}</span>
                           <StatusChip status={selectedRun.status} />
