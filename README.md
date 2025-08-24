@@ -64,7 +64,7 @@ pnpm check
 
 ## Web UI
 
-The web interface provides a visual way to monitor and manage runs with live SSE logs. See [packages/web/README.md](packages/web/README.md) for detailed documentation.
+The web interface provides a visual way to monitor and manage runs with live SSE logs, including an **Agents Panel** for real-time agent monitoring. See [packages/web/README.md](packages/web/README.md) for detailed documentation including the [Agents Panel section](packages/web/README.md#agents-panel).
 
 ### Quick Start
 
@@ -77,6 +77,13 @@ pnpm --filter @prompt2prod/web dev
 ```
 
 Open http://localhost:5173 to access the web interface.
+
+### Features
+
+- **Agents Panel**: Monitor agent status and heartbeat activity with live polling
+- **Runs Management**: View, create, and manage runs with live SSE logs
+- **Agent Filtering**: Filter runs by selected agent
+- **Real-time Updates**: Live status updates and log streaming
 
 ### Environment Variables
 

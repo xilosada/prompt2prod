@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Run } from './api';
-import { getSelectedRunId, setSelectedRunId, CachedRun } from './lib/localStore';
+import {
+  getSelectedRunId,
+  setSelectedRunId,
+  getSelectedAgentId,
+  setSelectedAgentId,
+  CachedRun,
+} from './lib/localStore';
 import { copyToClipboard } from './lib/clipboard';
 import { RunList } from './components/RunList';
 import { RunLogs } from './components/RunLogs';
 import { RunCreateForm } from './components/RunCreateForm';
 import { StatusChip } from './components/StatusChip';
+import { AgentsPanel } from './components/AgentsPanel';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
 
@@ -15,6 +22,7 @@ export function App() {
   const [isLoadingRun, setIsLoadingRun] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentIdState] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; paused: boolean }>(
     {
       connected: false,
@@ -22,11 +30,16 @@ export function App() {
     },
   );
 
-  // Load selected run ID from localStorage on mount
+  // Load selected run ID and agent ID from localStorage on mount
   useEffect(() => {
     const savedRunId = getSelectedRunId();
     if (savedRunId) {
       setSelectedRunIdState(savedRunId);
+    }
+
+    const savedAgentId = getSelectedAgentId();
+    if (savedAgentId) {
+      setSelectedAgentIdState(savedAgentId);
     }
   }, []);
 
@@ -78,6 +91,16 @@ export function App() {
     setTimeout(() => setCopyFeedback(null), 2000);
   };
 
+  const handleSelectAgent = (agentId: string | null) => {
+    setSelectedAgentIdState(agentId);
+    setSelectedAgentId(agentId);
+  };
+
+  const handleClearAgentFilter = () => {
+    setSelectedAgentIdState(null);
+    setSelectedAgentId(null);
+  };
+
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/50">
@@ -93,26 +116,36 @@ export function App() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Runs</h2>
-                <button
-                  onClick={() => setShowCreateForm(!showCreateForm)}
-                  className="rounded-lg bg-indigo-600 px-3 py-1 text-sm hover:bg-indigo-500"
-                >
-                  {showCreateForm ? 'Cancel' : 'New'}
-                </button>
+            <div className="space-y-6">
+              {/* Agents Panel */}
+              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                <AgentsPanel selectedAgentId={selectedAgentId} onSelectAgent={handleSelectAgent} />
               </div>
 
-              {showCreateForm ? (
-                <RunCreateForm onRunCreated={handleRunCreated} />
-              ) : (
-                <RunList
-                  selectedRunId={selectedRunId}
-                  onSelectRun={handleSelectRun}
-                  onImportRun={handleImportRun}
-                />
-              )}
+              {/* Runs Panel */}
+              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Runs</h2>
+                  <button
+                    onClick={() => setShowCreateForm(!showCreateForm)}
+                    className="rounded-lg bg-indigo-600 px-3 py-1 text-sm hover:bg-indigo-500"
+                  >
+                    {showCreateForm ? 'Cancel' : 'New'}
+                  </button>
+                </div>
+
+                {showCreateForm ? (
+                  <RunCreateForm onRunCreated={handleRunCreated} />
+                ) : (
+                  <RunList
+                    selectedRunId={selectedRunId}
+                    onSelectRun={handleSelectRun}
+                    onImportRun={handleImportRun}
+                    agentFilterId={selectedAgentId}
+                    clearAgentFilter={handleClearAgentFilter}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -185,6 +218,8 @@ export function App() {
           <div className="text-xs text-slate-400">
             API: {API_BASE} • Status: {connectionStatus.connected ? 'Connected' : 'Disconnected'}
             {connectionStatus.paused && ' • Paused'}
+            {' • Agent filter: '}
+            {selectedAgentId ? selectedAgentId : 'None'}
             {' • prompt2prod v0.1.0'}
           </div>
         </div>

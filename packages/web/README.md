@@ -4,6 +4,7 @@ React-based web interface for monitoring and managing prompt2prod runs with live
 
 ## Features
 
+- **Agents Panel**: Monitor agent status and heartbeat activity with live polling
 - **Runs List**: View and manage cached runs with import by ID functionality
 - **Run Detail**: View run information and status with live SSE log streaming
 - **Create Runs**: Form to create new runs with agent ID and JSON payload
@@ -54,15 +55,17 @@ pnpm test:e2e
 ## Components
 
 - `App.tsx`: Main application shell with two-pane layout
+- `AgentsPanel.tsx`: Agent monitoring with status chips and heartbeat polling
 - `RunList.tsx`: Sidebar with runs list and import functionality
 - `RunLogs.tsx`: SSE log streaming with connect/disconnect controls
 - `RunCreateForm.tsx`: Form for creating new runs
-- `StatusChip.tsx`: Status indicator component
+- `StatusChip.tsx`: Status indicator component for runs and agents
 
 ## API Integration
 
 The web app integrates with the prompt2prod API:
 
+- `GET /agents`: List all agents with status and heartbeat info
 - `POST /runs`: Create new runs
 - `GET /runs/:id`: Get run details
 - `GET /runs/:id/logs/stream`: SSE endpoint for live logs
@@ -104,3 +107,47 @@ If you experience frequent SSE disconnections:
 - **Vite Cache**: Clear Vite cache if you see build issues: `rm -rf node_modules/.vite`
 - **Port Conflicts**: Ensure ports 5173 (web) and 3000 (API) are available
 - **Dependencies**: Run `pnpm install` if you see module resolution errors
+
+## Agents Panel
+
+The Agents Panel provides real-time monitoring of agent status and activity:
+
+### Features
+
+- **Live Polling**: Automatically refreshes agent list every 10 seconds
+- **Manual Refresh**: Click "Refresh" button for immediate update
+- **Status Indicators**: Visual status chips (online/stale/offline) with tooltips
+- **Last Seen**: Relative timestamps showing when each agent last heartbeated
+- **Agent Filtering**: Click an agent to filter runs list by that agent
+- **Clear Filter**: Remove agent filter to show all runs
+
+### Agent Status
+
+- **Online**: Agent heartbeated within last 15 seconds (green)
+- **Stale**: Agent heartbeated 15-60 seconds ago (amber)
+- **Offline**: Agent heartbeated more than 60 seconds ago or never seen (gray)
+
+### Usage
+
+1. **View Agents**: Agents panel shows in the sidebar above the runs list
+2. **Filter Runs**: Click any agent to filter runs list to show only that agent's runs
+3. **Clear Filter**: Click "Clear" button in the filter pill to remove the filter
+4. **Monitor Status**: Watch status chips and last seen times for agent health
+
+### Troubleshooting: No Agents?
+
+If the agents panel shows "No agents — is any agent heartbeating?":
+
+1. **Check Agent Process**: Ensure an agent is running and heartbeating
+2. **API Connection**: Verify the API server is running and accessible
+3. **Heartbeat Frequency**: Agents should heartbeat at least every 15 seconds to stay "online"
+4. **Network Issues**: Check for network connectivity between agent and API server
+
+Example agent heartbeat (using SDK):
+
+```javascript
+import { createAgent } from '@prompt2prod/sdk-agent-node';
+
+const agent = createAgent('my-agent-id');
+agent.heartbeat(); // Send heartbeat every 10-15 seconds
+```

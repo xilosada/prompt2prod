@@ -6,6 +6,7 @@ export interface CachedRun {
 
 const RUNS_KEY = 'p2p.v1.runs';
 const SELECTED_RUN_KEY = 'p2p.v1.selected_run';
+const SELECTED_AGENT_KEY = 'p2p.v1.selected_agent';
 const MAX_RUNS = 100;
 
 export function getCachedRuns(): CachedRun[] {
@@ -64,6 +65,26 @@ export function setSelectedRunId(id: string | null): void {
       localStorage.setItem(SELECTED_RUN_KEY, id);
     } else {
       localStorage.removeItem(SELECTED_RUN_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function getSelectedAgentId(): string | null {
+  try {
+    return localStorage.getItem(SELECTED_AGENT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setSelectedAgentId(id: string | null): void {
+  try {
+    if (id) {
+      localStorage.setItem(SELECTED_AGENT_KEY, id);
+    } else {
+      localStorage.removeItem(SELECTED_AGENT_KEY);
     }
   } catch {
     // Ignore storage errors
