@@ -1,14 +1,26 @@
 import type { ApprovalPolicy, ApprovalRule } from '@prompt2prod/shared';
 
 /**
+ * Provider name validation constants
+ * These can be reused in UI/SDK validation
+ */
+export const PROVIDER_NAME_REGEX = /^[A-Za-z0-9._-]+$/;
+export const PROVIDER_NAME_MAX_LENGTH = 64;
+export const PROVIDER_NAME_MIN_LENGTH = 1;
+
+/**
  * Validates if a string is a valid provider name
  * Provider names must be non-empty, ≤64 chars, and match [A-Za-z0-9._-]+
  */
 function isValidProviderName(name: string): boolean {
-  if (typeof name !== 'string' || name.length === 0 || name.length > 64) {
+  if (
+    typeof name !== 'string' ||
+    name.length < PROVIDER_NAME_MIN_LENGTH ||
+    name.length > PROVIDER_NAME_MAX_LENGTH
+  ) {
     return false;
   }
-  return /^[A-Za-z0-9._-]+$/.test(name);
+  return PROVIDER_NAME_REGEX.test(name);
 }
 
 /**
@@ -30,7 +42,7 @@ function validateApprovalRule(
   if (!isValidProviderName(ruleObj.provider as string)) {
     return {
       ok: false,
-      reason: 'provider must be a non-empty string ≤64 chars matching [A-Za-z0-9._-]+',
+      reason: `provider must be a non-empty string ≤${PROVIDER_NAME_MAX_LENGTH} chars matching [A-Za-z0-9._-]+`,
     };
   }
 

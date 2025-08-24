@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateApprovalPolicy } from '../src/approvals/policy.js';
+import { validateApprovalPolicy, PROVIDER_NAME_MAX_LENGTH } from '../src/approvals/policy.js';
 
 describe('validateApprovalPolicy', () => {
   describe('valid policies', () => {
@@ -202,7 +202,7 @@ describe('validateApprovalPolicy', () => {
 
       expect(result.ok).toBe(false);
       expect(result.reason).toBe(
-        'rule 0: provider must be a non-empty string ≤64 chars matching [A-Za-z0-9._-]+',
+        `rule 0: provider must be a non-empty string ≤${PROVIDER_NAME_MAX_LENGTH} chars matching [A-Za-z0-9._-]+`,
       );
     });
 
@@ -214,7 +214,7 @@ describe('validateApprovalPolicy', () => {
 
       expect(result.ok).toBe(false);
       expect(result.reason).toBe(
-        'rule 0: provider must be a non-empty string ≤64 chars matching [A-Za-z0-9._-]+',
+        `rule 0: provider must be a non-empty string ≤${PROVIDER_NAME_MAX_LENGTH} chars matching [A-Za-z0-9._-]+`,
       );
     });
 
@@ -259,7 +259,7 @@ describe('validateApprovalPolicy', () => {
 
         expect(result.ok).toBe(false);
         expect(result.reason).toBe(
-          'rule 0: provider must be a non-empty string ≤64 chars matching [A-Za-z0-9._-]+',
+          `rule 0: provider must be a non-empty string ≤${PROVIDER_NAME_MAX_LENGTH} chars matching [A-Za-z0-9._-]+`,
         );
       }
     });
@@ -272,7 +272,7 @@ describe('validateApprovalPolicy', () => {
 
       expect(result.ok).toBe(false);
       expect(result.reason).toBe(
-        'rule 0: provider must be a non-empty string ≤64 chars matching [A-Za-z0-9._-]+',
+        `rule 0: provider must be a non-empty string ≤${PROVIDER_NAME_MAX_LENGTH} chars matching [A-Za-z0-9._-]+`,
       );
     });
 
@@ -288,7 +288,7 @@ describe('validateApprovalPolicy', () => {
 
       expect(result.ok).toBe(false);
       expect(result.reason).toBe(
-        'rule 1: provider must be a non-empty string ≤64 chars matching [A-Za-z0-9._-]+',
+        `rule 1: provider must be a non-empty string ≤${PROVIDER_NAME_MAX_LENGTH} chars matching [A-Za-z0-9._-]+`,
       );
     });
   });

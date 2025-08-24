@@ -372,5 +372,25 @@ describe('approval policy evaluator', () => {
 
       expect(result).toBe('satisfied');
     });
+
+    it('should return error for empty registry + anyOf([unsupported])', async () => {
+      const registry = createProviderRegistry(); // empty registry
+
+      const policy: ApprovalPolicy = {
+        mode: 'anyOf',
+        rules: [{ provider: 'missing-provider' }], // provider not in registry
+      };
+
+      const result = await evaluatePolicy(policy, {
+        taskId: 'test-task',
+        registry,
+        strict: true,
+      });
+
+      // Missing provider is treated as 'unsupported', and in anyOf mode
+      // with strict=true, when all rules are unsupported, it returns 'error'
+      // because no conditions can be met
+      expect(result).toBe('error');
+    });
   });
 });

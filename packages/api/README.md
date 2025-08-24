@@ -223,8 +223,15 @@ curl -s -X POST http://localhost:3000/coordinator/intake \
 
 The evaluator implements strict aggregation semantics:
 
-- **allOf**: All rules must be satisfied. Any `fail` or `unsupported` (in strict mode) results in `error`
-- **anyOf**: At least one rule must be satisfied. All `fail`/`unsupported` (in strict mode) results in `error`
+| Mode    | Rule Verdicts                     | Result      | Notes                            |
+| ------- | --------------------------------- | ----------- | -------------------------------- |
+| `allOf` | Any `fail`                        | `error`     | Fast-fail on definitive negative |
+| `allOf` | Any `unsupported` (strict)        | `error`     | Fast-fail on missing capability  |
+| `allOf` | All `satisfied`                   | `satisfied` | All conditions met               |
+| `allOf` | Some `pending`                    | `pending`   | Waiting for conditions           |
+| `anyOf` | Any `satisfied`                   | `satisfied` | At least one condition met       |
+| `anyOf` | All `{fail,unsupported}` (strict) | `error`     | No conditions can be met         |
+| `anyOf` | At least one `pending`            | `pending`   | Waiting for conditions           |
 
 Provider verdicts:
 
