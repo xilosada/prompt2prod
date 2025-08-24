@@ -35,9 +35,7 @@ The Agents Panel provides real-time monitoring of agent status and activity:
 
 ### Agent Status
 
-- **Online**: Agent heartbeated within last 15 seconds (green)
-- **Stale**: Agent heartbeated 15-60 seconds ago (amber)
-- **Offline**: Agent heartbeated more than 60 seconds ago or never seen (gray)
+**online**: `now - lastSeen ≤ 15s` • **stale**: `15s < now - lastSeen ≤ 60s` • **offline**: `> 60s`
 
 ### Usage
 

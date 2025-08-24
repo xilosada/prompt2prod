@@ -40,6 +40,8 @@ Stream live logs for a run:
 curl -N http://localhost:3000/runs/<id>/logs/stream
 ```
 
+> Use `-N` (no buffer) for proper streaming. On Windows/PowerShell, prefer Git Bash or WSL for `curl -N`.
+
 **Dev helper** - emit a test log line:
 
 ```bash
@@ -93,7 +95,7 @@ Or without `jq`:
 curl -s http://localhost:3000/agents/<agentId>
 ```
 
-**Status policy** (defaults): **online** ≤15s, **stale** ≤60s, **offline** otherwise.
+**Status policy**: **online**: `now - lastSeen ≤ 15s` • **stale**: `15s < now - lastSeen ≤ 60s` • **offline**: `> 60s`
 
 Returned shape: `{ id, lastSeen, status, caps? }` (`lastSeen`: ms epoch).
 
@@ -111,13 +113,13 @@ curl -s -X POST http://localhost:3000/__test/agents/qa-agent/heartbeat \
   -d '{"caps":{"lang":"node"}}'
 ```
 
-> **Never enable `ENABLE_TEST_ENDPOINTS=1` in production.** Test routes bypass auth and are intended for CI only.
+> **Never enable `ENABLE_TEST_ENDPOINTS=1` in production.** These routes bypass auth and are CI-only.
 
 Verify test endpoints are disabled by default:
 
 ```bash
-curl -s http://localhost:3000/__test/agents/test/heartbeat
-# Expected: 404 Not Found
+# Should return 404 when not enabled
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/__test/agents/qa-agent/heartbeat
 ```
 
 ### Health Check
@@ -148,9 +150,7 @@ Returns system status including agent registry configuration.
 
 The API maintains an in-memory registry of agents based on heartbeat messages. Agent status is computed dynamically:
 
-- **online**: last heartbeat ≤ 15 seconds ago
-- **stale**: last heartbeat 15-60 seconds ago
-- **offline**: last heartbeat > 60 seconds ago or never seen
+**online**: `now - lastSeen ≤ 15s` • **stale**: `15s < now - lastSeen ≤ 60s` • **offline**: `> 60s`
 
 ### Configuration
 

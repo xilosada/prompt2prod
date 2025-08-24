@@ -159,9 +159,7 @@ client.heartbeat({
 
 The API computes agent status based on heartbeat frequency:
 
-- **online**: last heartbeat ≤ 15 seconds ago
-- **stale**: last heartbeat 15-60 seconds ago
-- **offline**: last heartbeat > 60 seconds ago or never seen
+**online**: `now - lastSeen ≤ 15s` • **stale**: `15s < now - lastSeen ≤ 60s` • **offline**: `> 60s`
 
 ## Environment Variables
 
