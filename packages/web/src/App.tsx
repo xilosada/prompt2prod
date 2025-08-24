@@ -6,6 +6,8 @@ import { RunLogs } from './components/RunLogs';
 import { RunCreateForm } from './components/RunCreateForm';
 import { StatusChip } from './components/StatusChip';
 
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
+
 export function App() {
   const [selectedRunId, setSelectedRunIdState] = useState<string | null>(null);
   const [selectedRun, setSelectedRun] = useState<Run | null>(null);
@@ -136,6 +138,13 @@ export function App() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800 bg-slate-900/50 mt-8">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="text-xs text-slate-400">API: {API_BASE} • prompt2prod v0.1.0</div>
+        </div>
+      </footer>
     </div>
   );
 }

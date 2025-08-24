@@ -15,10 +15,44 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
   const [payload, setPayload] = useState('{\n  "task": "hello world"\n}');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  const validateJson = (jsonString: string): boolean => {
+    if (!jsonString.trim()) return true;
+    try {
+      JSON.parse(jsonString);
+      setJsonError(null);
+      return true;
+    } catch (err) {
+      setJsonError('Invalid JSON format');
+      return false;
+    }
+  };
+
+  const handlePayloadChange = (value: string) => {
+    setPayload(value);
+    validateJson(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agentId.trim()) return;
+
+    // Validate all required fields
+    const trimmedAgentId = agentId.trim();
+    const trimmedRepo = repo.trim();
+    const trimmedBase = base.trim();
+    const trimmedPrompt = prompt.trim();
+
+    if (!trimmedAgentId || !trimmedRepo || !trimmedBase || !trimmedPrompt) {
+      setError('All fields are required');
+      return;
+    }
+
+    // Validate JSON payload
+    if (!validateJson(payload)) {
+      setError('Please fix the JSON payload error');
+      return;
+    }
 
     setIsCreating(true);
     setError(null);
@@ -26,18 +60,14 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
     try {
       let parsedPayload: Record<string, unknown> | undefined;
       if (payload.trim()) {
-        try {
-          parsedPayload = JSON.parse(payload);
-        } catch {
-          throw new Error('Invalid JSON payload');
-        }
+        parsedPayload = JSON.parse(payload);
       }
 
       const request: CreateRunRequest = {
-        agentId: agentId.trim(),
-        repo: repo.trim(),
-        base: base.trim(),
-        prompt: prompt.trim(),
+        agentId: trimmedAgentId,
+        repo: trimmedRepo,
+        base: trimmedBase,
+        prompt: trimmedPrompt,
         payload: parsedPayload,
       };
 
@@ -116,12 +146,15 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
           <label className="block text-sm font-medium mb-2">Payload (JSON)</label>
           <textarea
             value={payload}
-            onChange={(e) => setPayload(e.target.value)}
+            onChange={(e) => handlePayloadChange(e.target.value)}
             placeholder='{"task": "hello world"}'
             rows={4}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+            className={`w-full rounded-lg bg-slate-900 border px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm ${
+              jsonError ? 'border-red-500' : 'border-slate-700'
+            }`}
           />
           <p className="text-xs text-slate-400 mt-1">Optional JSON payload to send to the agent</p>
+          {jsonError && <p className="text-xs text-red-400 mt-1">{jsonError}</p>}
         </div>
 
         {error && (
@@ -132,7 +165,14 @@ export function RunCreateForm({ onRunCreated, className = '' }: RunCreateFormPro
 
         <button
           type="submit"
-          disabled={isCreating || !agentId.trim()}
+          disabled={
+            isCreating ||
+            !agentId.trim() ||
+            !repo.trim() ||
+            !base.trim() ||
+            !prompt.trim() ||
+            !!jsonError
+          }
           className="w-full rounded-lg bg-indigo-600 px-4 py-2 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isCreating ? 'Creating...' : 'Create Run'}

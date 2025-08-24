@@ -75,3 +75,32 @@ The app uses localStorage to persist:
 - Cached runs (up to 100 most recent)
 - Selected run ID
 - User preferences
+
+## Troubleshooting
+
+### API Base Mismatch
+
+If you see CORS errors or connection issues, ensure the API server is running and the `VITE_API_BASE` environment variable is set correctly:
+
+```bash
+# Set the correct API base URL
+export VITE_API_BASE=http://localhost:3000
+
+# Or create a .env file
+echo "VITE_API_BASE=http://localhost:3000" > .env
+```
+
+### SSE Disconnections
+
+If you experience frequent SSE disconnections:
+
+1. **Browser Network**: Check browser dev tools Network tab for connection errors
+2. **API Server**: Ensure the API server is running and accessible
+3. **CORS**: Verify CORS is properly configured on the API server
+4. **Network**: Check for proxy/firewall issues that might interrupt long-lived connections
+
+### Development Issues
+
+- **Vite Cache**: Clear Vite cache if you see build issues: `rm -rf node_modules/.vite`
+- **Port Conflicts**: Ensure ports 5173 (web) and 3000 (API) are available
+- **Dependencies**: Run `pnpm install` if you see module resolution errors

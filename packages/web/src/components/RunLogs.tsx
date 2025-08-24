@@ -7,40 +7,88 @@ interface RunLogsProps {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
+const MAX_LINES = 1000;
 
 export function RunLogs({ runId, className = '' }: RunLogsProps) {
   const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const [isEmitting, setIsEmitting] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [showReconnectBanner, setShowReconnectBanner] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const userDisconnectedRef = useRef(false);
 
   const connect = useCallback(() => {
-    if (connected || !runId.trim()) return;
+    if (connected || connecting || !runId.trim()) return;
+
+    setConnecting(true);
+    setReconnectAttempts(0);
+    setShowReconnectBanner(false);
+    userDisconnectedRef.current = false;
 
     const url = `${API_BASE}/runs/${encodeURIComponent(runId.trim())}/logs/stream`;
     const es = new EventSource(url, { withCredentials: false });
 
-    es.onopen = () => setConnected(true);
+    es.onopen = () => {
+      setConnected(true);
+      setConnecting(false);
+      setReconnectAttempts(0);
+      setShowReconnectBanner(false);
+    };
+
     es.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        setLines((prev) => [...prev, String(data)]);
+        setLines((prev) => {
+          const newLines = [...prev, String(data)];
+          // Keep only the last MAX_LINES
+          return newLines.slice(-MAX_LINES);
+        });
       } catch {
-        setLines((prev) => [...prev, ev.data]);
+        setLines((prev) => {
+          const newLines = [...prev, ev.data];
+          return newLines.slice(-MAX_LINES);
+        });
       }
     };
+
     es.onerror = () => {
       es.close();
       setConnected(false);
+      setConnecting(false);
+
+      // Only attempt reconnect if user didn't manually disconnect
+      if (!userDisconnectedRef.current && reconnectAttempts < 3) {
+        const backoffDelay = Math.min(1000 * Math.pow(2, reconnectAttempts), 5000);
+        setShowReconnectBanner(true);
+        setReconnectAttempts((prev) => prev + 1);
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (!userDisconnectedRef.current) {
+            connect();
+          }
+        }, backoffDelay);
+      }
     };
 
     esRef.current = es;
-  }, [connected, runId]);
+  }, [connected, connecting, runId, reconnectAttempts]);
 
   const disconnect = useCallback(() => {
+    userDisconnectedRef.current = true;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
     esRef.current?.close();
     esRef.current = null;
     setConnected(false);
+    setConnecting(false);
+    setReconnectAttempts(0);
+    setShowReconnectBanner(false);
   }, []);
 
   const clear = () => setLines([]);
@@ -58,19 +106,43 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
     }
   };
 
-  useEffect(() => () => esRef.current?.close(), []);
+  useEffect(() => {
+    return () => {
+      userDisconnectedRef.current = true;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      esRef.current?.close();
+    };
+  }, []);
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Reconnect banner */}
+      {showReconnectBanner && (
+        <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-3 text-sm text-yellow-200">
+          <div className="flex items-center justify-between">
+            <span>Disconnected — retrying... (attempt {reconnectAttempts}/3)</span>
+            <button
+              onClick={disconnect}
+              className="text-yellow-300 hover:text-yellow-100 underline"
+            >
+              Stop retrying
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Logs</h3>
         <div className="flex gap-2">
           {!connected ? (
             <button
               onClick={connect}
-              className="rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500"
+              disabled={connecting}
+              className="rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Connect
+              {connecting ? 'Connecting...' : 'Connect'}
             </button>
           ) : (
             <button
@@ -87,6 +159,16 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
             Clear
           </button>
           <button
+            onClick={() => setPaused(!paused)}
+            className={`rounded-lg px-3 py-2 text-sm border ${
+              paused
+                ? 'bg-orange-600 border-orange-500 text-orange-100'
+                : 'bg-slate-800 border-slate-700 text-slate-300'
+            }`}
+          >
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button
             onClick={handleEmitTest}
             disabled={isEmitting}
             className="rounded-lg bg-emerald-600 px-3 py-2 text-sm hover:bg-emerald-500 disabled:opacity-50"
@@ -99,13 +181,24 @@ export function RunLogs({ runId, className = '' }: RunLogsProps) {
 
       <div className="text-sm text-slate-400">
         {connected ? 'Connected' : 'Disconnected'} • API: {API_BASE}
+        {paused && ' • Paused'}
       </div>
 
-      <pre className="rounded-xl bg-black/40 border border-slate-800 p-4 max-h-[60dvh] overflow-auto text-sm leading-6">
-        {lines.map((l, i) => (
-          <span key={i}>{l}\n</span>
-        ))}
-      </pre>
+      {lines.length === 0 ? (
+        <div className="rounded-xl bg-black/40 border border-slate-800 p-8 text-center text-slate-400">
+          {connected ? 'No logs received yet' : 'Connect to stream logs'}
+        </div>
+      ) : (
+        <pre
+          className="rounded-xl bg-black/40 border border-slate-800 p-4 max-h-[60dvh] overflow-auto text-sm leading-6"
+          aria-live="polite"
+          aria-label="Run logs"
+        >
+          {lines.map((l, i) => (
+            <span key={i}>{l}\n</span>
+          ))}
+        </pre>
+      )}
     </div>
   );
 }

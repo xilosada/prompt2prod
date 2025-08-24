@@ -64,9 +64,9 @@ pnpm check
 
 ## Web UI
 
-The web interface provides a visual way to monitor and manage runs with live SSE logs.
+The web interface provides a visual way to monitor and manage runs with live SSE logs. See [packages/web/README.md](packages/web/README.md) for detailed documentation.
 
-### Development
+### Quick Start
 
 ```bash
 # Install web dependencies
@@ -82,7 +82,7 @@ Open http://localhost:5173 to access the web interface.
 
 - `VITE_API_BASE`: API server URL (default: `http://localhost:3000`)
 
-### Build
+### Build & Test
 
 ```bash
 # Build for production
@@ -90,6 +90,9 @@ pnpm --filter @prompt2prod/web build
 
 # Preview built app
 pnpm --filter @prompt2prod/web preview
+
+# Run E2E tests
+pnpm --filter @prompt2prod/web test:e2e
 ```
 
 ## Agent SDK (Node)

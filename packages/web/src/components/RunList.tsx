@@ -11,21 +11,26 @@ interface RunListProps {
 export function RunList({ selectedRunId, onSelectRun, onImportRun }: RunListProps) {
   const [importId, setImportId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
   const cachedRuns = getCachedRuns();
 
   const handleImport = async () => {
-    if (!importId.trim()) return;
+    const trimmedId = importId.trim();
+    if (!trimmedId) return;
 
     setIsImporting(true);
+    setImportError(null);
+
     try {
       const run: CachedRun = {
-        id: importId.trim(),
+        id: trimmedId,
         addedAt: new Date().toISOString(),
       };
       addCachedRun(run);
       onImportRun(run);
       setImportId('');
     } catch (error) {
+      setImportError('Failed to import run. Please check the ID and try again.');
       console.error('Failed to import run:', error);
     } finally {
       setIsImporting(false);
@@ -38,31 +43,39 @@ export function RunList({ selectedRunId, onSelectRun, onImportRun }: RunListProp
         <h2 className="text-lg font-semibold mb-3">Runs</h2>
 
         {/* Import by ID */}
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Import run by ID..."
-            value={importId}
-            onChange={(e) => setImportId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleImport()}
-            className="flex-1 rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <button
-            onClick={handleImport}
-            disabled={isImporting || !importId.trim()}
-            className="rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isImporting ? 'Importing...' : 'Import'}
-          </button>
+        <div className="space-y-2 mb-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Import run by ID..."
+              value={importId}
+              onChange={(e) => setImportId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleImport()}
+              className="flex-1 rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              onClick={handleImport}
+              disabled={isImporting || !importId.trim()}
+              className="rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isImporting ? 'Importing...' : 'Import'}
+            </button>
+          </div>
+          {importError && (
+            <div className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg p-2">
+              {importError}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Runs list */}
       <div className="space-y-2">
         {cachedRuns.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-4">
-            No runs yet. Create a run or import one by ID.
-          </p>
+          <div className="text-center py-8">
+            <div className="text-slate-400 mb-2">No runs yet</div>
+            <div className="text-sm text-slate-500">Create a run to get started</div>
+          </div>
         ) : (
           cachedRuns.map((run) => (
             <button
