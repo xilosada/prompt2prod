@@ -6,6 +6,7 @@ import {
   isValidTargetRepo,
   isPolicyWithinCaps,
 } from '../util/validators.js';
+import { validateApprovalPolicy } from '../approvals/policy.js';
 
 // JSON Schemas
 const coordinatorIntakeSchema = {
@@ -61,7 +62,9 @@ const errorResponseSchema = {
   additionalProperties: false,
   properties: {
     error: { type: 'string' },
-    details: { type: 'object', additionalProperties: true },
+    details: {
+      oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }],
+    },
   },
   required: ['error'],
 };
@@ -125,6 +128,14 @@ function validateAndSanitizeIntake(input: Record<string, unknown>): CreateTaskIn
     }
 
     policy = input.policy as Record<string, unknown>;
+
+    // Validate approval policy if present
+    if (policy.approvals !== undefined) {
+      const approvalResult = validateApprovalPolicy(policy.approvals);
+      if (!approvalResult.ok) {
+        throw new Error(`Invalid approval policy: ${approvalResult.reason}`);
+      }
+    }
 
     // Check policy caps
     const capsCheck = isPolicyWithinCaps(policy);
@@ -196,8 +207,18 @@ export async function coordinatorIntakeRoutes(fastify: FastifyInstance) {
 
         return reply.header('Location', `/tasks/${task.id}`).code(201).send(task);
       } catch (error) {
+        const errorMessage = (error as Error).message;
+
+        // Check if this is an approval policy validation error
+        if (errorMessage.startsWith('Invalid approval policy:')) {
+          return reply.code(400).send({
+            error: 'invalid_approval_policy',
+            details: errorMessage.replace('Invalid approval policy: ', ''),
+          });
+        }
+
         return reply.code(400).send({
-          error: (error as Error).message,
+          error: errorMessage,
           details: { field: 'validation' },
         });
       }
