@@ -29,7 +29,7 @@ export interface CreateRunRequest {
   payload?: Record<string, unknown>;
 }
 
-import type { RunStatus } from '@prompt2prod/shared';
+export type RunStatus = 'queued' | 'running' | 'done' | 'error' | 'canceled';
 
 export interface Run {
   id: string;

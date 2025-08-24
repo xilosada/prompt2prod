@@ -1,5 +1,5 @@
 import React from 'react';
-import type { RunStatus } from '@prompt2prod/shared';
+import type { RunStatus } from '../api';
 
 export function RunStatusChip({
   status,

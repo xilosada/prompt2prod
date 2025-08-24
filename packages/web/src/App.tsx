@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Run, getRun, formatRelative } from './api';
-import type { RunStatus } from '@prompt2prod/shared';
+import { Run, getRun, formatRelative, type RunStatus } from './api';
 import {
   getSelectedRunId,
   setSelectedRunId,
@@ -55,19 +54,30 @@ export function App() {
     }
 
     setIsLoadingRun(true);
-    // For now, we'll just set a placeholder run since we don't have the actual API
-    // In a real implementation, you'd call getRun(selectedRunId)
-    setSelectedRun({
-      id: selectedRunId,
-      agentId: 'demo-agent',
-      repo: 'demo/repo',
-      base: 'main',
-      prompt: 'Hello world',
-      status: 'queued',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    setIsLoadingRun(false);
+    getRun(selectedRunId)
+      .then((run) => {
+        setSelectedRun(run);
+        setRunStatus(run.status);
+        setLastUpdated(Date.now());
+      })
+      .catch((error) => {
+        console.error('Failed to load run:', error);
+      })
+      .finally(() => {
+        setIsLoadingRun(false);
+      });
+  }, [selectedRunId]);
+
+  const refreshRunStatus = useCallback(async () => {
+    if (!selectedRunId) return;
+
+    try {
+      const run = await getRun(selectedRunId);
+      setRunStatus(run.status);
+      setLastUpdated(Date.now());
+    } catch (error) {
+      console.error('Failed to refresh run status:', error);
+    }
   }, [selectedRunId]);
 
   // Poll run status every 5 seconds
@@ -126,18 +136,6 @@ export function App() {
     setSelectedAgentIdState(null);
     setSelectedAgentId(null);
   };
-
-  const refreshRunStatus = useCallback(async () => {
-    if (!selectedRunId) return;
-
-    try {
-      const run = await getRun(selectedRunId);
-      setRunStatus(run.status);
-      setLastUpdated(Date.now());
-    } catch (error) {
-      console.error('Failed to refresh run status:', error);
-    }
-  }, [selectedRunId]);
 
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100">
