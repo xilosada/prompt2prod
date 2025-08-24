@@ -10,31 +10,19 @@ import {
 // JSON Schemas
 const coordinatorIntakeSchema = {
   type: 'object',
+  additionalProperties: false,
   required: ['title', 'goal', 'targetRepo'],
-  additionalProperties: false, // Strict - no extra fields allowed
   properties: {
-    title: {
-      type: 'string',
-    },
-    goal: {
-      type: 'string',
-    },
-    targetRepo: {
-      type: 'string',
-    },
+    title: { type: 'string' },
+    goal: { type: 'string' },
+    targetRepo: { type: 'string' },
     agents: {
       type: 'array',
-      items: {
-        type: 'string',
-      },
+      maxItems: 16,
+      items: { type: 'string' },
     },
-    policy: {
-      type: 'object',
-      additionalProperties: true, // Policy remains open for flexibility
-    },
-    plan: {
-      type: 'string',
-    },
+    policy: { type: 'object', additionalProperties: true },
+    plan: { type: 'string' },
   },
 };
 
@@ -80,12 +68,14 @@ const errorResponseSchema = {
 
 /**
  * Validates and sanitizes coordinator intake input
+ * Schema handles basic validation (types, extra fields)
+ * This function handles all business logic validation and sanitization
  */
 function validateAndSanitizeIntake(input: Record<string, unknown>): CreateTaskInput {
   // Trim and validate required fields
-  const title = trimmed(input.title);
-  const goal = trimmed(input.goal);
-  const targetRepo = trimmed(input.targetRepo);
+  const title = trimmed(input.title as string);
+  const goal = trimmed(input.goal as string);
+  const targetRepo = trimmed(input.targetRepo as string);
 
   // Check for empty required fields after trimming
   if (!title) {
@@ -115,13 +105,8 @@ function validateAndSanitizeIntake(input: Record<string, unknown>): CreateTaskIn
     );
   }
 
-  // Process agents array
+  // Process agents array (schema ensures it's an array with valid items)
   const agents = trimArrayUnique(Array.isArray(input.agents) ? input.agents : []);
-
-  // Validate agent count
-  if (agents.length > 16) {
-    throw new Error('Maximum 16 agents allowed after deduplication');
-  }
 
   // Validate each agent format
   for (const agent of agents) {
@@ -188,6 +173,7 @@ export async function coordinatorIntakeRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/coordinator/intake',
     {
+      attachValidation: true,
       schema: {
         body: coordinatorIntakeSchema,
         response: {
@@ -197,13 +183,20 @@ export async function coordinatorIntakeRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      if (request.validationError) {
+        return reply.code(400).send({
+          error: 'invalid_request',
+          details: request.validationError.validation,
+        });
+      }
+
       try {
         const sanitizedInput = validateAndSanitizeIntake(request.body as Record<string, unknown>);
         const task = taskRepo.create(sanitizedInput);
 
-        return reply.status(201).header('Location', `/tasks/${task.id}`).send(task);
+        return reply.header('Location', `/tasks/${task.id}`).code(201).send(task);
       } catch (error) {
-        return reply.status(400).send({
+        return reply.code(400).send({
           error: (error as Error).message,
           details: { field: 'validation' },
         });
