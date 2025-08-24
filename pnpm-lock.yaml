@@ -38,6 +38,9 @@ importers:
       '@fastify/cors':
         specifier: ^9.0.1
         version: 9.0.1
+      '@prompt2prod/shared':
+        specifier: workspace:*
+        version: link:../shared
       fastify:
         specifier: ^4.27.0
         version: 4.29.1
