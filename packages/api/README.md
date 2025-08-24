@@ -144,6 +144,39 @@ Returns system status including agent registry configuration.
 - Bus selection (if using NATS): `BUS_DRIVER=nats`, `NATS_URL=...`
 - `ENABLE_TEST_ENDPOINTS=1` — enable test-only endpoints (dev only)
 
+### Headless PR Composer
+
+The API includes a headless PR composer worker that automatically creates git branches and GitHub PRs from run patches based on policy configuration:
+
+| Variable                | Default      | Description                                                   |
+| ----------------------- | ------------ | ------------------------------------------------------------- |
+| `COMPOSE_PR_ON_STATUS`  | `done`       | CSV of statuses that trigger composition (e.g., `done,error`) |
+| `COMPOSE_PR_REMOTE_URL` | **required** | Git remote URL to push branches to                            |
+| `COMPOSE_PR_BASE`       | `main`       | Base branch for PRs and initial branch point                  |
+| `COMPOSE_PR_DRY_RUN`    | `false`      | Set to `1` to log plan only (no git/push/PR)                  |
+
+**Local demo with bare remote:**
+
+```bash
+# Create bare remote
+git init --bare /tmp/remote.git
+
+# Configure composer
+export COMPOSE_PR_REMOTE_URL=file:///tmp/remote.git
+export COMPOSE_PR_ON_STATUS=done
+
+# Start API
+node packages/api/dist/index.js
+
+# Create a run, send patch, set status=done -> branch appears in /tmp/remote.git
+```
+
+**GitHub integration:**
+
+- Set `COMPOSE_PR_REMOTE_URL=https://github.com/owner/repo.git`
+- Set `GITHUB_TOKEN` with `repo` scope for PR creation
+- Token must be in environment/Actions secrets; never commit it
+
 > **Security**: Store `GITHUB_TOKEN` in Actions secrets or local environment variables, never commit it to version control.
 
 ## Agent Registry

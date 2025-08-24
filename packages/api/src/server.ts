@@ -45,11 +45,15 @@ export function buildServer() {
   }
 
   // Create the bus ONCE and register all routes that depend on it
-  void createBus().then((bus) => {
+  void createBus().then(async (bus) => {
     registerSse(app, bus);
     registerRunRoutes(app, { bus, repo });
     registerPrRoutes(app);
     registerPrComposeRoutes(app);
+
+    // Start the headless PR composer worker
+    const { startComposer } = await import('./composer/worker.js');
+    startComposer(app, bus, repo);
 
     // Register dev-only run routes when enabled
     if (process.env.ENABLE_TEST_ENDPOINTS === '1') {

@@ -63,6 +63,18 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
         logsUnsub = statusUnsub = null;
       };
 
+      // Attach composer subscriptions if composer is enabled
+      try {
+        const attachComposer = (
+          req.server as { _attachComposerRun?: (runId: string) => Promise<void> }
+        )._attachComposerRun;
+        if (attachComposer) {
+          await attachComposer(id);
+        }
+      } catch {
+        // Ignore if composer is not available
+      }
+
       // 1) mark 'running' on first log
       logsUnsub = await deps.bus.subscribe<string>(topics.runLogs(id), async () => {
         deps.repo.setStatus(id, 'running');

@@ -10,6 +10,12 @@ export type RunRecord = {
   status: RunStatus;
   createdAt: number;
   updatedAt: number;
+  pr?: {
+    branch: string;
+    url?: string;
+    number?: number;
+  };
+  composeError?: string;
 };
 
 export interface RunsRepo {
@@ -18,6 +24,7 @@ export interface RunsRepo {
   ): RunRecord;
   get(id: string): RunRecord | undefined;
   setStatus(id: string, status: RunStatus): RunRecord | undefined;
+  update(id: string, updater: (run: RunRecord) => Partial<RunRecord>): RunRecord | undefined;
 }
 
 export function createMemoryRunsRepo(): RunsRepo {
@@ -41,6 +48,14 @@ export function createMemoryRunsRepo(): RunsRepo {
       const cur = map.get(id);
       if (!cur) return undefined;
       const next = { ...cur, status, updatedAt: Date.now() };
+      map.set(id, next);
+      return next;
+    },
+    update(id, updater) {
+      const cur = map.get(id);
+      if (!cur) return undefined;
+      const updates = updater(cur);
+      const next = { ...cur, ...updates, updatedAt: Date.now() };
       map.set(id, next);
       return next;
     },
