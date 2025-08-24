@@ -1,23 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/agents';
 
 test.describe('Agents Panel E2E', () => {
-  test('agents panel renders and filter functionality works', async ({ page }) => {
+  test('agents panel renders and filter functionality works', async ({ page, createAgent }) => {
+    // Create a test agent - this will fail if API is not available
+    await createAgent('test-agent-1', { lang: 'node', ver: 'test' });
+
     // Go to web base
     await page.goto('/');
 
     // Wait for the agents panel to be visible
     await expect(page.getByTestId('agents-panel')).toBeVisible();
 
-    // Wait up to 20s for at least one agent OR skip with a message if none
-    const agentItem = page.getByTestId(/^agent-item-/);
-
-    try {
-      await agentItem.first().waitFor({ timeout: 20000 });
-    } catch {
-      // No agents found within 20s, skip the test with a message
-      console.log('No agents found within 20s - skipping agent interaction test');
-      return;
-    }
+    // Wait for the agent to appear
+    const agentItem = page.getByTestId('agent-item-test-agent-1');
+    await expect(agentItem).toBeVisible({ timeout: 10000 });
 
     // If we get here, at least one agent was found
     const firstAgent = agentItem.first();
@@ -73,21 +69,18 @@ test.describe('Agents Panel E2E', () => {
     await expect(emptyState.or(agentItems.first())).toBeVisible();
   });
 
-  test('agent selection persists after page refresh', async ({ page }) => {
+  test('agent selection persists after page refresh', async ({ page, createAgent }) => {
+    // Create a test agent - this will fail if API is not available
+    await createAgent('test-agent-2', { lang: 'node', ver: 'test' });
+
     await page.goto('/');
 
     // Wait for agents panel
     await expect(page.getByTestId('agents-panel')).toBeVisible();
 
-    // Wait up to 20s for at least one agent
-    const agentItem = page.getByTestId(/^agent-item-/);
-
-    try {
-      await agentItem.first().waitFor({ timeout: 20000 });
-    } catch {
-      console.log('No agents found within 20s - skipping persistence test');
-      return;
-    }
+    // Wait for the agent to appear
+    const agentItem = page.getByTestId('agent-item-test-agent-2');
+    await expect(agentItem).toBeVisible({ timeout: 10000 });
 
     // Click the first agent to select it
     const firstAgent = agentItem.first();
@@ -114,21 +107,18 @@ test.describe('Agents Panel E2E', () => {
     await expect(firstAgent).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('keyboard navigation works for agent selection', async ({ page }) => {
+  test('keyboard navigation works for agent selection', async ({ page, createAgent }) => {
+    // Create a test agent - this will fail if API is not available
+    await createAgent('test-agent-3', { lang: 'node', ver: 'test' });
+
     await page.goto('/');
 
     // Wait for agents panel
     await expect(page.getByTestId('agents-panel')).toBeVisible();
 
-    // Wait up to 20s for at least one agent
-    const agentItem = page.getByTestId(/^agent-item-/);
-
-    try {
-      await agentItem.first().waitFor({ timeout: 20000 });
-    } catch {
-      console.log('No agents found within 20s - skipping keyboard test');
-      return;
-    }
+    // Wait for the agent to appear
+    const agentItem = page.getByTestId('agent-item-test-agent-3');
+    await expect(agentItem).toBeVisible({ timeout: 10000 });
 
     // Focus the first agent button
     await agentItem.first().focus();
@@ -146,21 +136,18 @@ test.describe('Agents Panel E2E', () => {
     await expect(agentItem.first()).toHaveAttribute('aria-pressed', 'false');
   });
 
-  test('relative time tooltips show precise timestamps', async ({ page }) => {
+  test('relative time tooltips show precise timestamps', async ({ page, createAgent }) => {
+    // Create a test agent - this will fail if API is not available
+    await createAgent('test-agent-4', { lang: 'node', ver: 'test' });
+
     await page.goto('/');
 
     // Wait for agents panel
     await expect(page.getByTestId('agents-panel')).toBeVisible();
 
-    // Wait up to 20s for at least one agent
-    const agentItem = page.getByTestId(/^agent-item-/);
-
-    try {
-      await agentItem.first().waitFor({ timeout: 20000 });
-    } catch {
-      console.log('No agents found within 20s - skipping tooltip test');
-      return;
-    }
+    // Wait for the agent to appear
+    const agentItem = page.getByTestId('agent-item-test-agent-4');
+    await expect(agentItem).toBeVisible({ timeout: 10000 });
 
     // Find the relative time element within the first agent
     const relativeTimeElement = agentItem.first().locator('.text-xs.text-slate-400');

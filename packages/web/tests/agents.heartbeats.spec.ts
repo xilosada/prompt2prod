@@ -1,17 +1,11 @@
-import { test, expect, request } from '@playwright/test';
+import { test, expect } from './fixtures/agents';
 
 const WEB_BASE = process.env.WEB_BASE ?? 'http://localhost:5173';
-const API_BASE = process.env.API_BASE ?? 'http://localhost:3000';
 const AGENT_ID = 'qa-agent';
 
-test('agents panel reflects online → stale transition', async ({ page }) => {
+test('agents panel reflects online → stale transition', async ({ page, createAgent }) => {
   // 1) seed one heartbeat via test-only endpoint
-  const api = await request.newContext();
-  const res = await api.post(`${API_BASE}/__test/agents/${AGENT_ID}/heartbeat`, {
-    headers: { 'content-type': 'application/json' },
-    data: { caps: { lang: 'node', ver: 'test' } },
-  });
-  expect(res.status()).toBe(204);
+  await createAgent(AGENT_ID, { lang: 'node', ver: 'test' });
 
   // 2) open UI, force refresh, expect ONLINE
   await page.goto(WEB_BASE);
