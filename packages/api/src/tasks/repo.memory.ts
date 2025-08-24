@@ -92,4 +92,19 @@ export class MemoryTaskRepo {
 
     return { items, total };
   }
+
+  update(id: string, updater: (task: Task) => Partial<Task>): Task | undefined {
+    const task = this.tasks.get(id);
+    if (!task) return undefined;
+
+    const updates = updater(task);
+    const updatedTask: Task = {
+      ...task,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.tasks.set(id, updatedTask);
+    return updatedTask;
+  }
 }

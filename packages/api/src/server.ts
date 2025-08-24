@@ -5,14 +5,17 @@ import { createBus } from './bus/factory.js';
 import { registerRunRoutes } from './runs/routes.js';
 import { registerPrRoutes } from './runs/pr.routes.js';
 import { registerPrComposeRoutes } from './runs/pr.compose.routes.js';
-import { createMemoryRunsRepo } from './runs/repo.memory.js';
+import { createMemoryRunsRepo, type RunsRepo } from './runs/repo.memory.js';
 import { createMemoryAgentRegistry, STATUS_THRESHOLDS } from './agents/registry.memory.js';
 import { registerAgentRoutes } from './agents/routes.js';
 import { registerAgentDevRoutes } from './agents/dev.routes.js';
 import { registerRunDevRoutes } from './runs/dev.routes.js';
 import { taskRoutes } from './tasks/routes.js';
+import { attachTaskOrchestrator, type TaskOrchestrator } from './tasks/orchestrator.js';
 import { coordinatorIntakeRoutes } from './coordinator/intake.routes.js';
 import { topics } from './bus/topics.js';
+import type { MemoryTaskRepo } from './tasks/repo.memory.js';
+import type { Bus } from './bus/Bus.js';
 
 export async function buildServer() {
   const app = Fastify();
@@ -36,6 +39,7 @@ export async function buildServer() {
 
   const repo = createMemoryRunsRepo();
   const agentRegistry = createMemoryAgentRegistry();
+  const taskRepo = new (await import('./tasks/repo.memory.js')).MemoryTaskRepo();
 
   // Create a map to track active subscriptions
   const agentSubscriptions = new Map<string, () => void>();
@@ -68,7 +72,15 @@ export async function buildServer() {
   registerRunRoutes(app, { bus, repo });
   registerPrRoutes(app);
   registerPrComposeRoutes(app);
-  app.register(taskRoutes);
+
+  // Attach task orchestrator
+  const orchestrator = attachTaskOrchestrator(app, bus, repo, taskRepo);
+
+  // Register task routes with orchestrator
+  (app as { _taskOrchestrator?: TaskOrchestrator })._taskOrchestrator = orchestrator;
+  (app as { _taskRepo?: MemoryTaskRepo })._taskRepo = taskRepo;
+  await taskRoutes(app, orchestrator, taskRepo);
+
   app.register(coordinatorIntakeRoutes);
 
   // Register dev-only run routes when enabled
@@ -117,6 +129,11 @@ export async function buildServer() {
     console.log('Agent registry: Memory bus detected - manual agent subscription required');
     console.log('For production with NATS, wildcard subscriptions will be used automatically');
   }
+
+  // Expose repos for testing
+  (app as { _runsRepo?: RunsRepo })._runsRepo = repo;
+  (app as { _taskRepo?: MemoryTaskRepo })._taskRepo = taskRepo;
+  (app as { _bus?: Bus })._bus = bus;
 
   return app;
 }
