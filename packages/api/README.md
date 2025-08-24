@@ -124,6 +124,35 @@ curl -s http://localhost:3000/tasks/<id>
 
 **Task states**: `planned` (initial) → `running` → `awaiting-approvals` → `done`/`error`/`canceled`
 
+### Coordinator Intake
+
+Create a task via coordinator submission with strict validation:
+
+```bash
+# Create a task via coordinator intake
+curl -s -X POST http://localhost:3000/coordinator/intake \
+  -H 'content-type: application/json' \
+  -d '{
+    "title":"Speed up CI",
+    "goal":"Reduce end-to-end build time by 30%",
+    "targetRepo":"file:///tmp/remote.git",
+    "agents":["qa","infra","qa"],  // duplicates OK, will be de-duped
+    "policy":{"priority":"high"},
+    "plan":"## Plan Proposal\\n**Goal:** ... (raw text kept for audit)"
+  }' | jq .
+```
+
+**Validation rules**:
+
+- `title`: 1-120 chars, trimmed
+- `goal`: 1-2000 chars, trimmed
+- `targetRepo`: GitHub slug (`owner/repo`) or file URL (`file:///path`)
+- `agents`: ≤16 unique, pattern `[A-Za-z0-9_.-]+`, trimmed
+- `policy`: ≤50 keys, ≤32KB serialized
+- `plan`: optional raw text stored under `policy.__plan` (truncated to 64KB)
+
+**Response**: 201 with canonical Task + `Location: /tasks/{id}` header
+
 ### Test-only (E2E)
 
 Enable test endpoints for end-to-end testing:
