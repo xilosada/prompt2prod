@@ -10,6 +10,7 @@ import { createMemoryAgentRegistry, STATUS_THRESHOLDS } from './agents/registry.
 import { registerAgentRoutes } from './agents/routes.js';
 import { registerAgentDevRoutes } from './agents/dev.routes.js';
 import { registerRunDevRoutes } from './runs/dev.routes.js';
+import { taskRoutes } from './tasks/routes.js';
 import { topics } from './bus/topics.js';
 
 export async function buildServer() {
@@ -66,6 +67,7 @@ export async function buildServer() {
   registerRunRoutes(app, { bus, repo });
   registerPrRoutes(app);
   registerPrComposeRoutes(app);
+  app.register(taskRoutes);
 
   // Register dev-only run routes when enabled
   if (process.env.ENABLE_TEST_ENDPOINTS === '1') {

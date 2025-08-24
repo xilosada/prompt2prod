@@ -99,6 +99,31 @@ curl -s http://localhost:3000/agents/<agentId>
 
 Returned shape: `{ id, lastSeen, status, caps? }` (`lastSeen`: ms epoch).
 
+### Tasks API (Core)
+
+Create and manage work plans for AI agents:
+
+```bash
+# Create a new task
+curl -s -X POST http://localhost:3000/tasks \
+  -H 'content-type: application/json' \
+  -d '{"title":"Refactor CI","goal":"Speed up checks","targetRepo":"file:///tmp/remote.git","agents":["qa","infra"]}'
+```
+
+List tasks with pagination:
+
+```bash
+curl -s http://localhost:3000/tasks?limit=5
+```
+
+Get specific task:
+
+```bash
+curl -s http://localhost:3000/tasks/<id>
+```
+
+**Task states**: `planned` (initial) → `running` → `awaiting-approvals` → `done`/`error`/`canceled`
+
 ### Test-only (E2E)
 
 Enable test endpoints for end-to-end testing:
