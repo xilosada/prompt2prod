@@ -59,7 +59,7 @@ const getTaskParamsSchema = {
   properties: {
     id: {
       type: 'string',
-      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      format: 'uuid',
     },
   },
 };
@@ -143,13 +143,17 @@ function cleanTaskInput(input: Record<string, unknown>): CreateTaskInput {
     throw new Error('Target repository is required and cannot be empty after trimming');
   }
 
-  // Validate targetRepo format after trimming
-  const githubSlugPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-  const fileUrlPattern = /^file:\/\/\/.+/;
+  // Validate targetRepo format after trimming - restrictive allow-list
+  const allowedPatterns = [
+    /^file:\/\/\/.+/, // file:///path
+    /^git@github\.com:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.git$/, // git@github.com:owner/repo.git
+    /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/, // https://github.com/owner/repo[.git]
+  ];
 
-  if (!githubSlugPattern.test(cleaned.targetRepo) && !fileUrlPattern.test(cleaned.targetRepo)) {
+  const isValidTargetRepo = allowedPatterns.some((pattern) => pattern.test(cleaned.targetRepo));
+  if (!isValidTargetRepo) {
     throw new Error(
-      'Target repository must be either a GitHub slug (owner/repo) or file URL (file:///path)',
+      'Target repository must be one of: file:///path, git@github.com:owner/repo.git, or https://github.com/owner/repo[.git]',
     );
   }
 
@@ -202,7 +206,7 @@ export async function taskRoutes(fastify: FastifyInstance) {
       try {
         const cleanedInput = cleanTaskInput(request.body as Record<string, unknown>);
         const task = taskRepo.create(cleanedInput);
-        return reply.status(201).send(task);
+        return reply.status(201).header('Location', `/tasks/${task.id}`).send(task);
       } catch (error) {
         return reply.status(400).send({
           error: (error as Error).message,

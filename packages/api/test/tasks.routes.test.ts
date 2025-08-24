@@ -32,6 +32,9 @@ describe('Tasks API', () => {
     expect(task.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(task.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     expect(task.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+    // Check Location header
+    expect(response.headers.location).toBe(`/tasks/${task.id}`);
   });
 
   it('POST /tasks - creates task with minimal payload', async () => {
@@ -40,7 +43,7 @@ describe('Tasks API', () => {
     const payload = {
       title: 'Test Task',
       goal: 'Test goal',
-      targetRepo: 'owner/repo',
+      targetRepo: 'https://github.com/owner/repo',
     };
 
     const response = await app.inject({
@@ -55,7 +58,7 @@ describe('Tasks API', () => {
     expect(task).toMatchObject({
       title: 'Test Task',
       goal: 'Test goal',
-      targetRepo: 'owner/repo',
+      targetRepo: 'https://github.com/owner/repo',
       agents: [],
       state: 'planned',
     });
@@ -67,7 +70,7 @@ describe('Tasks API', () => {
     const payload = {
       title: '  Test Task  ',
       goal: '  Test goal  ',
-      targetRepo: '  owner/repo  ',
+      targetRepo: '  https://github.com/owner/repo  ',
       agents: ['  qa  ', '  infra  '],
     };
 
@@ -83,7 +86,7 @@ describe('Tasks API', () => {
     expect(task).toMatchObject({
       title: 'Test Task',
       goal: 'Test goal',
-      targetRepo: 'owner/repo',
+      targetRepo: 'https://github.com/owner/repo',
       agents: ['qa', 'infra'],
       state: 'planned',
     });
@@ -95,7 +98,7 @@ describe('Tasks API', () => {
     const payload = {
       title: 'Test Task',
       goal: 'Test goal',
-      targetRepo: 'owner/repo',
+      targetRepo: 'https://github.com/owner/repo',
       agents: ['qa', '', '  ', 'infra', null, undefined],
     };
 
@@ -111,13 +114,13 @@ describe('Tasks API', () => {
     expect(task.agents).toEqual(['qa', 'infra']);
   });
 
-  it('POST /tasks - accepts GitHub slug format for targetRepo', async () => {
+  it('POST /tasks - accepts GitHub HTTPS format for targetRepo', async () => {
     const app = await buildServer();
 
     const payload = {
       title: 'Test Task',
       goal: 'Test goal',
-      targetRepo: 'owner/repo',
+      targetRepo: 'https://github.com/owner/repo',
     };
 
     const response = await app.inject({
@@ -136,6 +139,42 @@ describe('Tasks API', () => {
       title: 'Test Task',
       goal: 'Test goal',
       targetRepo: 'file:///tmp/remote.git',
+    };
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tasks',
+      payload,
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('POST /tasks - accepts GitHub SSH format for targetRepo', async () => {
+    const app = await buildServer();
+
+    const payload = {
+      title: 'Test Task',
+      goal: 'Test goal',
+      targetRepo: 'git@github.com:owner/repo.git',
+    };
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tasks',
+      payload,
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('POST /tasks - accepts GitHub HTTPS with .git suffix for targetRepo', async () => {
+    const app = await buildServer();
+
+    const payload = {
+      title: 'Test Task',
+      goal: 'Test goal',
+      targetRepo: 'https://github.com/owner/repo.git',
     };
 
     const response = await app.inject({
@@ -321,7 +360,7 @@ describe('Tasks API', () => {
       payload: {
         title: 'First Task',
         goal: 'First goal',
-        targetRepo: 'owner/repo1',
+        targetRepo: 'https://github.com/owner/repo1',
       },
     });
 
@@ -334,7 +373,7 @@ describe('Tasks API', () => {
       payload: {
         title: 'Second Task',
         goal: 'Second goal',
-        targetRepo: 'owner/repo2',
+        targetRepo: 'https://github.com/owner/repo2',
       },
     });
 
@@ -362,7 +401,7 @@ describe('Tasks API', () => {
       payload: {
         title: 'First Task',
         goal: 'First goal',
-        targetRepo: 'owner/repo1',
+        targetRepo: 'https://github.com/owner/repo1',
       },
     });
 
@@ -375,7 +414,7 @@ describe('Tasks API', () => {
       payload: {
         title: 'Second Task',
         goal: 'Second goal',
-        targetRepo: 'owner/repo2',
+        targetRepo: 'https://github.com/owner/repo2',
       },
     });
 
@@ -404,7 +443,7 @@ describe('Tasks API', () => {
         payload: {
           title: `Task ${i}`,
           goal: `Goal ${i}`,
-          targetRepo: `owner/repo${i}`,
+          targetRepo: `https://github.com/owner/repo${i}`,
         },
       });
       if (i < 3) {
@@ -434,7 +473,7 @@ describe('Tasks API', () => {
         payload: {
           title: `Task ${i}`,
           goal: `Goal ${i}`,
-          targetRepo: `owner/repo${i}`,
+          targetRepo: `https://github.com/owner/repo${i}`,
         },
       });
     }
@@ -462,7 +501,7 @@ describe('Tasks API', () => {
         payload: {
           title: `Task ${i}`,
           goal: `Goal ${i}`,
-          targetRepo: `owner/repo${i}`,
+          targetRepo: `https://github.com/owner/repo${i}`,
         },
       });
       // Small delay between tasks to ensure different timestamps
@@ -517,7 +556,7 @@ describe('Tasks API', () => {
       payload: {
         title: 'Test Task',
         goal: 'Test goal',
-        targetRepo: 'owner/repo',
+        targetRepo: 'https://github.com/owner/repo',
       },
     });
 
