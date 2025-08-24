@@ -9,6 +9,7 @@ import { createMemoryRunsRepo } from './runs/repo.memory.js';
 import { createMemoryAgentRegistry, STATUS_THRESHOLDS } from './agents/registry.memory.js';
 import { registerAgentRoutes } from './agents/routes.js';
 import { registerAgentDevRoutes } from './agents/dev.routes.js';
+import { registerRunDevRoutes } from './runs/dev.routes.js';
 import { topics } from './bus/topics.js';
 
 export function buildServer() {
@@ -49,6 +50,12 @@ export function buildServer() {
     registerRunRoutes(app, { bus, repo });
     registerPrRoutes(app);
     registerPrComposeRoutes(app);
+
+    // Register dev-only run routes when enabled
+    if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
+      registerRunDevRoutes(app, bus);
+      app.log.info('[dev] Test run-status endpoints enabled');
+    }
 
     // Subscribe to agent heartbeats
     // Note: Memory bus doesn't support wildcards, so we'll handle this differently

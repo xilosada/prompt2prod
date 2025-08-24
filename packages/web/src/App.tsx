@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Run } from './api';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Run, getRun, formatRelative, type RunStatus } from './api';
 import {
   getSelectedRunId,
   setSelectedRunId,
@@ -12,6 +12,7 @@ import { RunList } from './components/RunList';
 import { RunLogs } from './components/RunLogs';
 import { RunCreateForm } from './components/RunCreateForm';
 import { StatusChip } from './components/StatusChip';
+import { RunStatusChip } from './components/RunStatusChip';
 import { AgentsPanel } from './components/AgentsPanel';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
@@ -29,6 +30,8 @@ export function App() {
       paused: false,
     },
   );
+  const [runStatus, setRunStatus] = useState<RunStatus>('queued');
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
   // Load selected run ID and agent ID from localStorage on mount
   useEffect(() => {
@@ -51,20 +54,68 @@ export function App() {
     }
 
     setIsLoadingRun(true);
-    // For now, we'll just set a placeholder run since we don't have the actual API
-    // In a real implementation, you'd call getRun(selectedRunId)
-    setSelectedRun({
-      id: selectedRunId,
-      agentId: 'demo-agent',
-      repo: 'demo/repo',
-      base: 'main',
-      prompt: 'Hello world',
-      status: 'queued',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    setIsLoadingRun(false);
+    getRun(selectedRunId)
+      .then((run) => {
+        setSelectedRun(run);
+        setRunStatus(run.status);
+        setLastUpdated(Date.now());
+      })
+      .catch((error) => {
+        console.error('Failed to load run:', error);
+      })
+      .finally(() => {
+        setIsLoadingRun(false);
+      });
   }, [selectedRunId]);
+
+  const refreshRunStatus = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!selectedRunId) return;
+
+      try {
+        const run = await getRun(selectedRunId, signal);
+        setRunStatus(run.status);
+        setLastUpdated(Date.now());
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to refresh run status:', error);
+        }
+        throw error;
+      }
+    },
+    [selectedRunId],
+  );
+
+  // Poll run status every 5 seconds
+  useEffect(() => {
+    if (!selectedRunId) return;
+
+    const abortController = new AbortController();
+    let alive = true;
+
+    const tick = async () => {
+      if (alive && !abortController.signal.aborted) {
+        try {
+          await refreshRunStatus(abortController.signal);
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            console.error('Failed to refresh run status:', error);
+          }
+        }
+      }
+    };
+
+    // Initial fetch
+    tick();
+
+    const interval = setInterval(tick, 5000);
+
+    return () => {
+      alive = false;
+      abortController.abort();
+      clearInterval(interval);
+    };
+  }, [selectedRunId, refreshRunStatus]);
 
   const handleSelectRun = (runId: string) => {
     setSelectedRunIdState(runId);
@@ -182,8 +233,21 @@ export function App() {
                         </div>
                         <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
                           <span>Agent: {selectedRun.agentId}</span>
-                          <StatusChip status={selectedRun.status} />
+                          <RunStatusChip status={runStatus} />
+                          <span title={new Date(lastUpdated).toISOString()}>
+                            Last updated: {formatRelative(lastUpdated)}
+                          </span>
                         </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => refreshRunStatus()}
+                          className="rounded-lg bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700 border border-slate-700 transition-colors"
+                          title="Refresh run status"
+                          data-testid="refresh-status"
+                        >
+                          Refresh status
+                        </button>
                       </div>
                     </div>
 

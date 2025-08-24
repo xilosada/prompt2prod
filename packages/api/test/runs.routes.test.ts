@@ -48,7 +48,7 @@ describe('runs routes', () => {
 
     // repo has status
     const stored = repo.get(body.id)!;
-    expect(stored.status).toBe('dispatched');
+    expect(stored.status).toBe('queued');
   });
 
   it('GET /runs/:id returns record or 404', async () => {

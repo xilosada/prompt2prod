@@ -1,5 +1,8 @@
 export type Health = { ok: true };
 
+// Run status types
+export type RunStatus = 'queued' | 'running' | 'done' | 'error' | 'canceled';
+
 // Agent registry types
 export type AgentStatus = 'online' | 'stale' | 'offline';
 
