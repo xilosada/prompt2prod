@@ -1,0 +1,88 @@
+name: E2E Web UI Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/web/**'
+      - 'packages/api/**'
+      - '.github/workflows/e2e-web.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/web/**'
+      - 'packages/api/**'
+      - '.github/workflows/e2e-web.yml'
+
+jobs:
+  e2e-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.14.0'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build monorepo
+        run: pnpm -w build
+
+      - name: Install Playwright browsers
+        run: |
+          cd packages/web
+          npx playwright install --with-deps chromium
+
+      - name: Start API server
+        run: |
+          node packages/api/dist/index.js > api.log 2>&1 &
+          echo $! > api.pid
+          sleep 5
+          echo "API server started"
+
+      - name: Start web preview server
+        run: |
+          pnpm --filter @prompt2prod/web preview -- --port 5173 > web.log 2>&1 &
+          echo $! > web.pid
+          sleep 5
+          echo "Web server started"
+
+      - name: Run E2E tests
+        run: |
+          WEB_BASE=http://localhost:5173 pnpm --filter @prompt2prod/web test:e2e
+        env:
+          WEB_BASE: http://localhost:5173
+
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-artifacts
+          path: |
+            api.log
+            web.log
+            packages/web/test-results/
+            packages/web/playwright-report/
+            packages/web/playwright/.cache/
+            packages/web/screenshots/
+            packages/web/videos/
+
+      - name: Cleanup servers
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) 2>/dev/null || true
+          fi
+          if [ -f web.pid ]; then
+            kill $(cat web.pid) 2>/dev/null || true
+          fi

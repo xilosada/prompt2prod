@@ -62,6 +62,39 @@ export BUS_DRIVER=nats NATS_URL=nats://localhost:4222
 pnpm check
 ```
 
+## Web UI
+
+The web interface provides a visual way to monitor and manage runs with live SSE logs. See [packages/web/README.md](packages/web/README.md) for detailed documentation.
+
+### Quick Start
+
+```bash
+# Install web dependencies
+pnpm --filter @prompt2prod/web install
+
+# Start development server
+pnpm --filter @prompt2prod/web dev
+```
+
+Open http://localhost:5173 to access the web interface.
+
+### Environment Variables
+
+- `VITE_API_BASE`: API server URL (default: `http://localhost:3000`)
+
+### Build & Test
+
+```bash
+# Build for production
+pnpm --filter @prompt2prod/web build
+
+# Preview built app
+pnpm --filter @prompt2prod/web preview
+
+# Run E2E tests
+pnpm --filter @prompt2prod/web test:e2e
+```
+
 ## Agent SDK (Node)
 
 Install & run the mock agent locally (memory transport):
