@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node --watch dist/index.js",
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "pnpm --filter @prompt2prod/shared build && tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
