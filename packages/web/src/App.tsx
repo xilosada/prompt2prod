@@ -68,15 +68,18 @@ export function App() {
       });
   }, [selectedRunId]);
 
-  const refreshRunStatus = useCallback(async () => {
+  const refreshRunStatus = useCallback(async (signal?: AbortSignal) => {
     if (!selectedRunId) return;
 
     try {
-      const run = await getRun(selectedRunId);
+      const run = await getRun(selectedRunId, signal);
       setRunStatus(run.status);
       setLastUpdated(Date.now());
     } catch (error) {
-      console.error('Failed to refresh run status:', error);
+      if (error.name !== 'AbortError') {
+        console.error('Failed to refresh run status:', error);
+      }
+      throw error;
     }
   }, [selectedRunId]);
 
@@ -84,10 +87,18 @@ export function App() {
   useEffect(() => {
     if (!selectedRunId) return;
 
+    const abortController = new AbortController();
     let alive = true;
-    const tick = () => {
-      if (alive) {
-        refreshRunStatus().catch(() => {});
+
+    const tick = async () => {
+      if (alive && !abortController.signal.aborted) {
+        try {
+          await refreshRunStatus(abortController.signal);
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            console.error('Failed to refresh run status:', error);
+          }
+        }
       }
     };
 
@@ -98,6 +109,7 @@ export function App() {
 
     return () => {
       alive = false;
+      abortController.abort();
       clearInterval(interval);
     };
   }, [selectedRunId, refreshRunStatus]);
@@ -219,12 +231,14 @@ export function App() {
                         <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
                           <span>Agent: {selectedRun.agentId}</span>
                           <RunStatusChip status={runStatus} />
-                          <span>Last updated: {formatRelative(lastUpdated)}</span>
+                          <span title={new Date(lastUpdated).toISOString()}>
+                            Last updated: {formatRelative(lastUpdated)}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={refreshRunStatus}
+                          onClick={() => refreshRunStatus()}
                           className="rounded-lg bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700 border border-slate-700 transition-colors"
                           title="Refresh run status"
                           data-testid="refresh-status"

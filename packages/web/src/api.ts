@@ -58,8 +58,10 @@ export async function createRun(request: CreateRunRequest): Promise<Run> {
   return response.json();
 }
 
-export async function getRun(id: string): Promise<Run> {
-  const response = await fetch(`${API_BASE}/runs/${encodeURIComponent(id)}`);
+export async function getRun(id: string, signal?: AbortSignal): Promise<Run> {
+  const response = await fetch(`${API_BASE}/runs/${encodeURIComponent(id)}`, {
+    signal,
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to get run: ${response.statusText}`);
