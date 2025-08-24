@@ -15,10 +15,46 @@ The development server will be available at http://localhost:5173.
 
 - **Runs List**: Import/create runs; view cached runs with import by ID functionality
 - **Run Detail**: View run information and status with live SSE log streaming (Connect/Disconnect/Emit test)
+- **Run Status UI**: Real-time status monitoring with polling and manual refresh
 - **Agents Panel**: Live polling (10s), status chips, last seen, filter runs by agent
 - **Create Runs**: Form to create new runs with agent ID and JSON payload
 - **Live Logs**: Real-time log streaming via Server-Sent Events (SSE)
 - **Dev Tools**: "Emit test" button for development and testing
+
+## Run Status UI
+
+The Run Status UI provides real-time monitoring of run status with automatic polling and manual refresh capabilities:
+
+### Features
+
+- **Status Chip**: Visual status indicator showing current run state
+- **Auto Polling**: Automatically refreshes run status every 5 seconds
+- **Manual Refresh**: "Refresh status" button for immediate status update
+- **Last Updated**: Shows when the status was last refreshed
+- **Status Transitions**: Supports all run states: queued, running, done, error, canceled
+
+### Run Status States
+
+- **queued**: Run is waiting to be processed
+- **running**: Run is currently executing
+- **done**: Run completed successfully
+- **error**: Run failed with an error
+- **canceled**: Run was canceled
+
+### Usage
+
+1. **Select a Run**: Choose a run from the runs list to view its details
+2. **Monitor Status**: Watch the status chip for real-time updates
+3. **Manual Refresh**: Click "Refresh status" button for immediate update
+4. **Last Updated**: Check the timestamp to see when status was last refreshed
+
+### E2E Testing
+
+The run status UI includes comprehensive end-to-end testing:
+
+- **Status Transitions**: Tests queued → running → done transitions
+- **API Integration**: Uses test-only endpoints for status manipulation
+- **UI Validation**: Verifies status chip updates and refresh functionality
 
 ## Agents Panel
 

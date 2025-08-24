@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Run } from './api';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Run, getRun, type RunStatus, formatRelative } from './api';
 import {
   getSelectedRunId,
   setSelectedRunId,
@@ -12,6 +12,7 @@ import { RunList } from './components/RunList';
 import { RunLogs } from './components/RunLogs';
 import { RunCreateForm } from './components/RunCreateForm';
 import { StatusChip } from './components/StatusChip';
+import { RunStatusChip } from './components/RunStatusChip';
 import { AgentsPanel } from './components/AgentsPanel';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
@@ -29,6 +30,8 @@ export function App() {
       paused: false,
     },
   );
+  const [runStatus, setRunStatus] = useState<RunStatus>('queued');
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
   // Load selected run ID and agent ID from localStorage on mount
   useEffect(() => {
@@ -66,6 +69,28 @@ export function App() {
     setIsLoadingRun(false);
   }, [selectedRunId]);
 
+  // Poll run status every 5 seconds
+  useEffect(() => {
+    if (!selectedRunId) return;
+
+    let alive = true;
+    const tick = () => {
+      if (alive) {
+        refreshRunStatus().catch(() => {});
+      }
+    };
+
+    // Initial fetch
+    tick();
+
+    const interval = setInterval(tick, 5000);
+
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, [selectedRunId, refreshRunStatus]);
+
   const handleSelectRun = (runId: string) => {
     setSelectedRunIdState(runId);
     setSelectedRunId(runId);
@@ -100,6 +125,18 @@ export function App() {
     setSelectedAgentIdState(null);
     setSelectedAgentId(null);
   };
+
+  const refreshRunStatus = useCallback(async () => {
+    if (!selectedRunId) return;
+
+    try {
+      const run = await getRun(selectedRunId);
+      setRunStatus(run.status);
+      setLastUpdated(Date.now());
+    } catch (error) {
+      console.error('Failed to refresh run status:', error);
+    }
+  }, [selectedRunId]);
 
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100">
@@ -182,8 +219,19 @@ export function App() {
                         </div>
                         <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
                           <span>Agent: {selectedRun.agentId}</span>
-                          <StatusChip status={selectedRun.status} />
+                          <RunStatusChip status={runStatus} />
+                          <span>Last updated: {formatRelative(lastUpdated)}</span>
                         </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={refreshRunStatus}
+                          className="rounded-lg bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700 border border-slate-700 transition-colors"
+                          title="Refresh run status"
+                          data-testid="refresh-status"
+                        >
+                          Refresh status
+                        </button>
                       </div>
                     </div>
 

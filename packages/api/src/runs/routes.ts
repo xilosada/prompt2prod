@@ -70,14 +70,17 @@ export function registerRunRoutes(app: FastifyInstance, deps: { bus: Bus; repo: 
         await toClose?.();
       });
 
-      // 2) terminal statuses via runs.<id>.status
+      // 2) status updates via runs.<id>.status
       statusUnsub = await deps.bus.subscribe<{
-        state: 'done' | 'error' | 'canceled';
+        state: 'queued' | 'running' | 'done' | 'error' | 'canceled';
         detail?: unknown;
       }>(topics.runStatus(id), async (msg) => {
-        if (msg?.state === 'done' || msg?.state === 'error' || msg?.state === 'canceled') {
+        if (msg?.state) {
           deps.repo.setStatus(id, msg.state);
-          await cleanup();
+          // Only cleanup for terminal statuses
+          if (msg.state === 'done' || msg.state === 'error' || msg.state === 'canceled') {
+            await cleanup();
+          }
         }
       });
 

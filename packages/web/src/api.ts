@@ -29,13 +29,15 @@ export interface CreateRunRequest {
   payload?: Record<string, unknown>;
 }
 
+export type RunStatus = 'queued' | 'running' | 'done' | 'error' | 'canceled';
+
 export interface Run {
   id: string;
   agentId: string;
   repo: string;
   base: string;
   prompt: string;
-  status: 'queued' | 'dispatched' | 'running' | 'done' | 'error' | 'canceled';
+  status: RunStatus;
   createdAt: string;
   updatedAt: string;
 }
