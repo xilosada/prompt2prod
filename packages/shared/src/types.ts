@@ -13,6 +13,17 @@ export interface AgentView {
   caps?: Record<string, unknown>;
 }
 
+// Approval policy types
+export type ApprovalRule = {
+  provider: string;
+  [key: string]: unknown; // provider-specific payloads
+};
+
+export type ApprovalPolicy = {
+  mode: 'allOf' | 'anyOf';
+  rules: ApprovalRule[]; // 1..16 rules
+};
+
 // Task types
 export type TaskState =
   | 'planned'

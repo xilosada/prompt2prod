@@ -381,6 +381,229 @@ describe('Coordinator Intake Routes', () => {
         expect(task.targetRepo).toBe('owner/repo');
         expect(task.agents).toEqual(['agent1', 'agent2']);
       });
+
+      it('should accept valid approval policy', async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test approval policy',
+            goal: 'Test approval policy validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'allOf',
+                rules: [
+                  { provider: 'manual-approval' },
+                  { provider: 'security-scan', threshold: 'high' },
+                ],
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(201);
+        const task = JSON.parse(response.body) as Task;
+        expect(task.policy?.approvals).toEqual({
+          mode: 'allOf',
+          rules: [
+            { provider: 'manual-approval' },
+            { provider: 'security-scan', threshold: 'high' },
+          ],
+        });
+      });
+
+      it('should accept valid anyOf approval policy', async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test anyOf approval policy',
+            goal: 'Test anyOf approval policy validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'anyOf',
+                rules: [
+                  { provider: 'manual-approval' },
+                  { provider: 'auto-approval', conditions: ['ci-passed'] },
+                ],
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(201);
+        const task = JSON.parse(response.body) as Task;
+        expect(task.policy?.approvals).toEqual({
+          mode: 'anyOf',
+          rules: [
+            { provider: 'manual-approval' },
+            { provider: 'auto-approval', conditions: ['ci-passed'] },
+          ],
+        });
+      });
+    });
+
+    describe('Approval policy validation failures', () => {
+      it('should reject invalid approval policy mode', async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test invalid approval mode',
+            goal: 'Test approval mode validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'invalid',
+                rules: [{ provider: 'test-provider' }],
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        const error = JSON.parse(response.body);
+        expect(error.error).toBe('invalid_approval_policy');
+        expect(error.details).toContain('mode must be either "allOf" or "anyOf"');
+      });
+
+      it('should reject approval policy with empty rules', async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test empty approval rules',
+            goal: 'Test empty rules validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'allOf',
+                rules: [],
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        const error = JSON.parse(response.body);
+        expect(error.error).toBe('invalid_approval_policy');
+        expect(error.details).toContain('rules array cannot be empty');
+      });
+
+      it('should reject approval policy with too many rules', async () => {
+        const rules = Array.from({ length: 17 }, (_, i) => ({
+          provider: `provider${i}`,
+        }));
+
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test too many approval rules',
+            goal: 'Test rules limit validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'allOf',
+                rules,
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        const error = JSON.parse(response.body);
+        expect(error.error).toBe('invalid_approval_policy');
+        expect(error.details).toContain('rules array cannot have more than 16 elements');
+      });
+
+      it('should reject approval policy with invalid provider names', async () => {
+        const invalidProviders = [
+          'provider with spaces',
+          'provider@invalid',
+          'provider#invalid',
+          '',
+        ];
+
+        for (const provider of invalidProviders) {
+          const response = await app.inject({
+            method: 'POST',
+            url: '/coordinator/intake',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+              title: 'Test invalid provider name',
+              goal: 'Test provider name validation',
+              targetRepo: 'owner/repo',
+              policy: {
+                approvals: {
+                  mode: 'allOf',
+                  rules: [{ provider }],
+                },
+              },
+            },
+          });
+
+          expect(response.statusCode).toBe(400);
+          const error = JSON.parse(response.body);
+          expect(error.error).toBe('invalid_approval_policy');
+          expect(error.details).toContain('provider must be a non-empty string');
+        }
+      });
+
+      it('should reject approval policy with missing provider field', async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test missing provider field',
+            goal: 'Test provider field validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'allOf',
+                rules: [{ someField: 'value' }],
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        const error = JSON.parse(response.body);
+        expect(error.error).toBe('invalid_approval_policy');
+        expect(error.details).toContain('rule must have a provider field');
+      });
+
+      it('should reject approval policy with non-object rule', async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/coordinator/intake',
+          headers: { 'content-type': 'application/json' },
+          payload: {
+            title: 'Test non-object rule',
+            goal: 'Test rule object validation',
+            targetRepo: 'owner/repo',
+            policy: {
+              approvals: {
+                mode: 'allOf',
+                rules: ['not an object'],
+              },
+            },
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        const error = JSON.parse(response.body);
+        expect(error.error).toBe('invalid_approval_policy');
+        expect(error.details).toContain('rule must be an object');
+      });
     });
   });
 });

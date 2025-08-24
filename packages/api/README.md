@@ -173,6 +173,77 @@ curl -s -X POST http://localhost:3000/coordinator/intake \
 
 **Response**: 201 with canonical Task + `Location: /tasks/{id}` header
 
+### Approval Policy (Core)
+
+The API supports task-specific approval policies that define conditions for task execution. Approval policies are validated at intake and can be evaluated later by the approval gate.
+
+**Policy Structure**:
+
+```json
+{
+  "mode": "allOf" | "anyOf",
+  "rules": [
+    {
+      "provider": "provider-name",
+      "customField": "customValue"
+    }
+  ]
+}
+```
+
+**Validation Rules**:
+
+- `mode`: Must be either `"allOf"` or `"anyOf"`
+- `rules`: Array with 1-16 rules
+- Each rule must have a `provider` field (string, 1-64 chars, pattern `[A-Za-z0-9._-]+`)
+- Provider-specific fields are allowed (no schema validation yet)
+
+**Usage in Intake**:
+
+```bash
+curl -s -X POST http://localhost:3000/coordinator/intake \
+  -H 'content-type: application/json' \
+  -d '{
+    "title":"Security-sensitive change",
+    "goal":"Update authentication system",
+    "targetRepo":"owner/repo",
+    "policy":{
+      "approvals":{
+        "mode":"allOf",
+        "rules":[
+          {"provider":"manual-approval"},
+          {"provider":"security-scan","threshold":"high"}
+        ]
+      }
+    }
+  }'
+```
+
+**STRICT Mode Behavior**:
+
+The evaluator implements strict aggregation semantics:
+
+- **allOf**: All rules must be satisfied. Any `fail` or `unsupported` (in strict mode) results in `error`
+- **anyOf**: At least one rule must be satisfied. All `fail`/`unsupported` (in strict mode) results in `error`
+
+Provider verdicts:
+
+- `satisfied`: Condition met
+- `pending`: Condition not met yet, but could be later
+- `fail`: Condition cannot be met (definitive negative)
+- `unsupported`: Provider not available in this deployment
+
+**Error Response**:
+
+Invalid approval policies return 400 with specific error details:
+
+```json
+{
+  "error": "invalid_approval_policy",
+  "details": "mode must be either \"allOf\" or \"anyOf\""
+}
+```
+
 ### Test-only (E2E)
 
 Enable test endpoints for end-to-end testing:
