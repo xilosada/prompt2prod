@@ -138,11 +138,27 @@ The API maintains an in-memory registry of agents based on heartbeat messages. A
 - **stale**: last heartbeat 15-60 seconds ago
 - **offline**: last heartbeat > 60 seconds ago or never seen
 
+### Configuration
+
+Status thresholds and rate limiting can be configured via environment variables:
+
+```bash
+# Status thresholds (milliseconds)
+AGENT_ONLINE_TTL_MS=15000    # Default: 15 seconds
+AGENT_STALE_TTL_MS=60000     # Default: 60 seconds
+
+# Rate limiting (milliseconds)
+AGENT_MIN_HEARTBEAT_INTERVAL_MS=250  # Default: 250ms
+```
+
 ### List all agents
 
 ```bash
 curl -s http://localhost:3000/agents
-# → [{"id":"agent-1","lastSeen":1703123456789,"status":"online","caps":{"feature":"test"}}]
+# → {
+#     "agents": [{"id":"agent-1","lastSeen":1703123456789,"status":"online","caps":{"feature":"test"}}],
+#     "thresholds": {"onlineTtlMs":15000,"staleTtlMs":60000,"minHeartbeatIntervalMs":250}
+# }
 ```
 
 ### Get specific agent
@@ -170,6 +186,24 @@ Agents send heartbeats with optional capabilities:
 ```
 
 The `caps` field is optional and can contain any JSON object (max 32KB).
+
+### Health Check
+
+The health endpoint includes agent registry configuration:
+
+```bash
+curl -s http://localhost:3000/health
+# → {
+#     "ok": true,
+#     "agentRegistry": {
+#         "thresholds": {
+#             "onlineTtlMs": 15000,
+#             "staleTtlMs": 60000,
+#             "minHeartbeatIntervalMs": 250
+#         }
+#     }
+# }
+```
 
 ### Run Lifecycle
 

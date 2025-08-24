@@ -8,11 +8,19 @@ export interface AgentEntry {
   caps?: Record<string, unknown>;
 }
 
-// Status thresholds in milliseconds
+// Status thresholds in milliseconds - configurable via environment
 export const STATUS_THRESHOLDS = {
-  ONLINE_TTL: 15 * 1000, // 15 seconds
-  STALE_TTL: 60 * 1000, // 60 seconds
+  ONLINE_TTL: parseInt(process.env.AGENT_ONLINE_TTL_MS ?? '15000'), // 15 seconds default
+  STALE_TTL: parseInt(process.env.AGENT_STALE_TTL_MS ?? '60000'), // 60 seconds default
 } as const;
+
+// Validate thresholds
+if (STATUS_THRESHOLDS.ONLINE_TTL <= 0 || STATUS_THRESHOLDS.STALE_TTL <= 0) {
+  throw new Error('Agent status thresholds must be positive values');
+}
+if (STATUS_THRESHOLDS.ONLINE_TTL >= STATUS_THRESHOLDS.STALE_TTL) {
+  throw new Error('ONLINE_TTL must be less than STALE_TTL');
+}
 
 export function statusFrom(lastSeen: number, now: number = Date.now()): AgentStatus {
   const age = now - lastSeen;
@@ -32,14 +40,30 @@ export function statusFrom(lastSeen: number, now: number = Date.now()): AgentSta
 
 export function createMemoryAgentRegistry() {
   const agents = new Map<string, AgentEntry>();
+  const lastHeartbeatTime = new Map<string, number>(); // For rate limiting
 
   // Caps size limit to prevent memory issues
   const MAX_CAPS_SIZE = 32 * 1024; // 32KB
+
+  // Rate limiting: minimum interval between heartbeats per agent (configurable)
+  const MIN_HEARTBEAT_INTERVAL = parseInt(process.env.AGENT_MIN_HEARTBEAT_INTERVAL_MS ?? '250'); // 250ms default
 
   return {
     upsertHeartbeat(id: string, caps?: Record<string, unknown>): void {
       const now = Date.now();
       const existing = agents.get(id);
+      const lastHeartbeat = lastHeartbeatTime.get(id);
+
+      // Rate limiting: ignore heartbeats that are too frequent
+      if (lastHeartbeat && now - lastHeartbeat < MIN_HEARTBEAT_INTERVAL) {
+        // Log rate limiting (but don't spam - only log occasionally)
+        if ((now - lastHeartbeat) % 1000 < MIN_HEARTBEAT_INTERVAL) {
+          console.warn(
+            `Agent ${id} heartbeat rate limited (${now - lastHeartbeat}ms < ${MIN_HEARTBEAT_INTERVAL}ms)`,
+          );
+        }
+        return; // Ignore this heartbeat
+      }
 
       // Validate caps size if provided
       let validatedCaps = caps ?? existing?.caps;
@@ -57,11 +81,27 @@ export function createMemoryAgentRegistry() {
         }
       }
 
+      // Track status transition for metrics
+      const oldStatus = existing ? statusFrom(existing.lastSeen, now) : 'offline';
+
       agents.set(id, {
         id,
         lastSeen: now,
         caps: validatedCaps,
       });
+
+      lastHeartbeatTime.set(id, now);
+
+      // Emit status transition metric if status changed
+      const newStatus = statusFrom(now, now); // Should be 'online' for new heartbeat
+      if (oldStatus !== newStatus) {
+        console.log(
+          `[METRIC] agent_status_transition agent_id=${id} old_status=${oldStatus} new_status=${newStatus}`,
+        );
+      }
+
+      // Emit heartbeat counter metric
+      console.log(`[METRIC] agent_heartbeat_received agent_id=${id}`);
     },
 
     getAll(now: number = Date.now()): AgentView[] {

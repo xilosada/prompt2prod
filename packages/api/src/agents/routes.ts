@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { STATUS_THRESHOLDS } from './registry.memory.js';
 
 const agentViewSchema = {
   type: 'object',
@@ -29,12 +30,34 @@ export function registerAgentRoutes(
     {
       schema: {
         response: {
-          200: agentsResponseSchema,
+          200: {
+            type: 'object',
+            properties: {
+              agents: agentsResponseSchema,
+              thresholds: {
+                type: 'object',
+                properties: {
+                  onlineTtlMs: { type: 'integer' },
+                  staleTtlMs: { type: 'integer' },
+                  minHeartbeatIntervalMs: { type: 'integer' },
+                },
+                required: ['onlineTtlMs', 'staleTtlMs', 'minHeartbeatIntervalMs'],
+              },
+            },
+            required: ['agents', 'thresholds'],
+          },
         },
       },
     },
     async () => {
-      return registry.getAll();
+      return {
+        agents: registry.getAll(),
+        thresholds: {
+          onlineTtlMs: STATUS_THRESHOLDS.ONLINE_TTL,
+          staleTtlMs: STATUS_THRESHOLDS.STALE_TTL,
+          minHeartbeatIntervalMs: parseInt(process.env.AGENT_MIN_HEARTBEAT_INTERVAL_MS ?? '250'),
+        },
+      };
     },
   );
 

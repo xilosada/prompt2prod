@@ -35,8 +35,8 @@ describe('E2E: agent heartbeat ingestion', () => {
       // 1) Initially, no agents should be registered
       const initialRes = await fetch(`${base}/agents`);
       expect(initialRes.status).toBe(200);
-      const initialAgents = await initialRes.json();
-      expect(initialAgents).toEqual([]);
+      const initialResponse = await initialRes.json();
+      expect(initialResponse.agents).toEqual([]);
 
       // 2) Simulate a heartbeat from an agent
       const agentId = 'test-agent-123';
@@ -49,11 +49,17 @@ describe('E2E: agent heartbeat ingestion', () => {
       // 4) Check that the agent now appears in the registry
       const agentsRes = await fetch(`${base}/agents`);
       expect(agentsRes.status).toBe(200);
-      const agents = await agentsRes.json();
-      expect(agents).toHaveLength(1);
-      expect(agents[0].id).toBe(agentId);
-      expect(agents[0].status).toBe('online');
-      expect(agents[0].caps).toEqual(caps);
+      const response = await agentsRes.json();
+      expect(response.agents).toHaveLength(1);
+      expect(response.agents[0].id).toBe(agentId);
+      expect(response.agents[0].status).toBe('online');
+      expect(response.agents[0].caps).toEqual(caps);
+
+      // Check that thresholds are included in response
+      expect(response.thresholds).toBeDefined();
+      expect(response.thresholds.onlineTtlMs).toBe(15 * 1000);
+      expect(response.thresholds.staleTtlMs).toBe(60 * 1000);
+      expect(response.thresholds.minHeartbeatIntervalMs).toBe(250);
 
       // 5) Check specific agent endpoint
       const agentRes = await fetch(`${base}/agents/${agentId}`);
@@ -67,10 +73,11 @@ describe('E2E: agent heartbeat ingestion', () => {
       const unknownRes = await fetch(`${base}/agents/unknown-agent`);
       expect(unknownRes.status).toBe(404);
 
-      // 7) Test multiple heartbeats update the same agent
+      // 7) Test multiple heartbeats update the same agent (with delay to avoid rate limiting)
       const newCaps = { feature: 'updated', version: '2.0.0' };
+      await new Promise((r) => setTimeout(r, 300)); // Wait beyond rate limit
       await bus.publish(topics.agentHeartbeat(agentId), { at: Date.now(), caps: newCaps });
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100)); // Wait for processing
 
       const updatedRes = await fetch(`${base}/agents/${agentId}`);
       expect(updatedRes.status).toBe(200);
@@ -81,5 +88,5 @@ describe('E2E: agent heartbeat ingestion', () => {
       await app.close();
       await bus.close();
     }
-  }, 5000);
+  }, 10000);
 });

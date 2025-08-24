@@ -97,8 +97,8 @@ describe('agent registry', () => {
       const entry1 = registry._getRawEntry(agentId);
       const firstSeen = entry1!.lastSeen;
 
-      // Advance time
-      vi.advanceTimersByTime(100);
+      // Advance time beyond rate limit
+      vi.advanceTimersByTime(300); // More than 250ms rate limit
 
       // Second heartbeat
       registry.upsertHeartbeat(agentId, caps2);
@@ -239,6 +239,20 @@ describe('agent registry', () => {
     it('exports correct threshold values', () => {
       expect(STATUS_THRESHOLDS.ONLINE_TTL).toBe(15 * 1000); // 15 seconds
       expect(STATUS_THRESHOLDS.STALE_TTL).toBe(60 * 1000); // 60 seconds
+    });
+
+    it('applies rate limiting to frequent heartbeats', () => {
+      const agentId = 'rate-limited-agent';
+
+      // First heartbeat should work
+      registry.upsertHeartbeat(agentId);
+      const firstEntry = registry._getRawEntry(agentId);
+      expect(firstEntry).toBeDefined();
+
+      // Second heartbeat within rate limit should be ignored
+      registry.upsertHeartbeat(agentId);
+      const secondEntry = registry._getRawEntry(agentId);
+      expect(secondEntry?.lastSeen).toBe(firstEntry?.lastSeen); // Should be unchanged
     });
   });
 });

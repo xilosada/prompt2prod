@@ -6,7 +6,7 @@ import { registerRunRoutes } from './runs/routes.js';
 import { registerPrRoutes } from './runs/pr.routes.js';
 import { registerPrComposeRoutes } from './runs/pr.compose.routes.js';
 import { createMemoryRunsRepo } from './runs/repo.memory.js';
-import { createMemoryAgentRegistry } from './agents/registry.memory.js';
+import { createMemoryAgentRegistry, STATUS_THRESHOLDS } from './agents/registry.memory.js';
 import { registerAgentRoutes } from './agents/routes.js';
 import { topics } from './bus/topics.js';
 
@@ -19,7 +19,16 @@ export function buildServer() {
     credentials: true,
   });
 
-  app.get('/health', async () => ({ ok: true }));
+  app.get('/health', async () => ({
+    ok: true,
+    agentRegistry: {
+      thresholds: {
+        onlineTtlMs: STATUS_THRESHOLDS.ONLINE_TTL,
+        staleTtlMs: STATUS_THRESHOLDS.STALE_TTL,
+        minHeartbeatIntervalMs: parseInt(process.env.AGENT_MIN_HEARTBEAT_INTERVAL_MS ?? '250'),
+      },
+    },
+  }));
 
   const repo = createMemoryRunsRepo();
   const agentRegistry = createMemoryAgentRegistry();
