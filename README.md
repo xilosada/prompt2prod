@@ -17,7 +17,7 @@ prompt2prod is a platform that enables AI agents to work on code repositories by
 
 ## Packages
 
-- **[API](./packages/api/README.md)** — Fastify server with endpoints for runs, logs/SSE, agents, compose PR, and test-only routes
+- **[API](./packages/api/README.md)** — Fastify server with endpoints for runs, logs/SSE, agents, compose PR, Tasks API, and test-only routes
 - **[SDK Agent Node](./packages/sdk-agent-node/README.md)** — Node.js SDK for creating agents that can receive work, publish logs, and submit patches
 - **[Web UI](./packages/web/README.md)** — React interface for monitoring runs, agents, and managing the system
 
