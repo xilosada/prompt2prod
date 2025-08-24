@@ -1,14 +1,31 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { getAgents, formatRelative, type AgentView } from '../api';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import {
+  getAgents,
+  getAgentsWithThresholds,
+  formatRelative,
+  type AgentView,
+  type AgentThresholds,
+} from '../api';
 import { StatusChip } from './StatusChip';
 
 type AgentsPanelProps = {
   selectedAgentId: string | null;
   onSelectAgent: (id: string | null) => void;
+  useThresholds?: boolean; // Optional: use thresholds for more precise labels
 };
 
-export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps) {
+// Normalize agent ID for safe use in data-testid attributes
+function normalizeTestId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9]/g, '-');
+}
+
+export function AgentsPanel({
+  selectedAgentId,
+  onSelectAgent,
+  useThresholds = false,
+}: AgentsPanelProps) {
   const [agents, setAgents] = useState<AgentView[]>([]);
+  const [thresholds, setThresholds] = useState<AgentThresholds | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
@@ -29,11 +46,18 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
     abortController.current = new AbortController();
 
     try {
-      const agentsData = await getAgents(abortController.current.signal);
-      if (!alive.current) return; // Check again after async operation
-      setAgents(agentsData);
+      if (useThresholds) {
+        const response = await getAgentsWithThresholds(abortController.current.signal);
+        if (!alive.current) return;
+        setAgents(response.agents);
+        setThresholds(response.thresholds);
+      } else {
+        const agentsData = await getAgents(abortController.current.signal);
+        if (!alive.current) return;
+        setAgents(agentsData);
+      }
     } catch (err) {
-      if (!alive.current) return; // Check again after async operation
+      if (!alive.current) return;
 
       // Don't set error for aborted requests
       if (err instanceof Error && err.name === 'AbortError') {
@@ -43,7 +67,7 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
       setError(err instanceof Error ? err.message : 'Failed to fetch agents');
       console.error('Failed to fetch agents:', err);
     } finally {
-      if (!alive.current) return; // Check again before setting loading state
+      if (!alive.current) return;
       setIsLoading(false);
     }
   };
@@ -62,7 +86,7 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
         abortController.current.abort();
       }
     };
-  }, []);
+  }, [useThresholds]); // Re-run if useThresholds changes
 
   const handleAgentClick = (agentId: string) => {
     if (selectedAgentId === agentId) {
@@ -79,18 +103,63 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
     }
   };
 
-  // Sort agents by status (online → stale → offline), then by lastSeen desc
-  const sortedAgents = [...agents].sort((a, b) => {
-    const statusOrder = { online: 0, stale: 1, offline: 2 };
-    const aOrder = statusOrder[a.status];
-    const bOrder = statusOrder[b.status];
+  // Memoize sorted agents to avoid re-sorting on every render
+  const sortedAgents = useMemo(() => {
+    return [...agents].sort((a, b) => {
+      const statusOrder = { online: 0, stale: 1, offline: 2 };
+      const aOrder = statusOrder[a.status];
+      const bOrder = statusOrder[b.status];
 
-    if (aOrder !== bOrder) {
-      return aOrder - bOrder;
-    }
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
 
-    return b.lastSeen - a.lastSeen; // desc
-  });
+      return b.lastSeen - a.lastSeen; // desc
+    });
+  }, [agents]);
+
+  // Memoize agent items to prevent unnecessary re-renders
+  const agentItems = useMemo(() => {
+    return sortedAgents.map((agent) => {
+      const isSelected = selectedAgentId === agent.id;
+      const normalizedTestId = normalizeTestId(agent.id);
+
+      return (
+        <li key={agent.id}>
+          <button
+            onClick={() => handleAgentClick(agent.id)}
+            onKeyDown={(e) => handleKeyDown(e, agent.id)}
+            role="button"
+            aria-pressed={isSelected}
+            tabIndex={0}
+            className={`w-full text-left p-3 rounded-lg border transition-colors ${
+              isSelected
+                ? 'bg-indigo-600/20 border-indigo-500 text-indigo-100'
+                : 'bg-slate-900 border-slate-700 hover:bg-slate-800'
+            }`}
+            data-testid={`agent-item-${normalizedTestId}`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-sm truncate">{agent.id}</div>
+                <div
+                  className="text-xs text-slate-400"
+                  title={new Date(agent.lastSeen).toISOString()}
+                >
+                  {formatRelative(agent.lastSeen)}
+                </div>
+              </div>
+              <StatusChip
+                status={agent.status}
+                className="ml-2 flex-shrink-0"
+                data-testid={`agent-status-${normalizedTestId}`}
+              />
+            </div>
+          </button>
+        </li>
+      );
+    });
+  }, [sortedAgents, selectedAgentId]);
 
   return (
     <div className="space-y-4" data-testid="agents-panel">
@@ -120,35 +189,7 @@ export function AgentsPanel({ selectedAgentId, onSelectAgent }: AgentsPanelProps
           </div>
         ) : (
           <ul className="space-y-2" role="listbox">
-            {sortedAgents.map((agent) => (
-              <li key={agent.id}>
-                <button
-                  onClick={() => handleAgentClick(agent.id)}
-                  onKeyDown={(e) => handleKeyDown(e, agent.id)}
-                  role="button"
-                  aria-pressed={selectedAgentId === agent.id}
-                  tabIndex={0}
-                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                    selectedAgentId === agent.id
-                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-100'
-                      : 'bg-slate-900 border-slate-700 hover:bg-slate-800'
-                  }`}
-                  data-testid={`agent-item-${agent.id}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm truncate">{agent.id}</div>
-                      <div className="text-xs text-slate-400">{formatRelative(agent.lastSeen)}</div>
-                    </div>
-                    <StatusChip
-                      status={agent.status}
-                      className="ml-2 flex-shrink-0"
-                      data-testid={`agent-status-${agent.id}`}
-                    />
-                  </div>
-                </button>
-              </li>
-            ))}
+            {agentItems}
           </ul>
         )}
       </div>

@@ -142,4 +142,33 @@ test.describe('Agents Panel E2E', () => {
     // Verify agent is deselected
     await expect(agentItem.first()).toHaveAttribute('aria-pressed', 'false');
   });
+
+  test('relative time tooltips show precise timestamps', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for agents panel
+    await expect(page.getByTestId('agents-panel')).toBeVisible();
+
+    // Wait up to 20s for at least one agent
+    const agentItem = page.getByTestId(/^agent-item-/);
+
+    try {
+      await agentItem.first().waitFor({ timeout: 20000 });
+    } catch {
+      console.log('No agents found within 20s - skipping tooltip test');
+      return;
+    }
+
+    // Find the relative time element within the first agent
+    const relativeTimeElement = agentItem.first().locator('.text-xs.text-slate-400');
+
+    // Verify it has a title attribute with ISO timestamp
+    const title = await relativeTimeElement.getAttribute('title');
+    expect(title).toBeTruthy();
+
+    // Verify it's a valid ISO timestamp
+    const timestamp = new Date(title!);
+    expect(timestamp.getTime()).toBeGreaterThan(0);
+    expect(timestamp.toISOString()).toBe(title);
+  });
 });

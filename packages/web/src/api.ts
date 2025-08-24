@@ -9,6 +9,18 @@ export type AgentView = {
   caps?: Record<string, unknown>;
 };
 
+// Agent registry thresholds (optional, for future UI labels)
+export interface AgentThresholds {
+  onlineTtlMs: number;
+  staleTtlMs: number;
+  minHeartbeatIntervalMs: number;
+}
+
+export interface AgentsResponse {
+  agents: AgentView[];
+  thresholds: AgentThresholds;
+}
+
 export interface CreateRunRequest {
   agentId: string;
   repo: string;
@@ -70,6 +82,12 @@ export async function getAgents(signal?: AbortSignal): Promise<AgentView[]> {
   if (!res.ok) throw new Error(`getAgents failed: ${res.status}`);
   const data = await res.json();
   return data.agents;
+}
+
+export async function getAgentsWithThresholds(signal?: AbortSignal): Promise<AgentsResponse> {
+  const res = await fetch(`${API_BASE}/agents`, { signal });
+  if (!res.ok) throw new Error(`getAgents failed: ${res.status}`);
+  return res.json();
 }
 
 export function formatRelative(msEpoch: number): string {
