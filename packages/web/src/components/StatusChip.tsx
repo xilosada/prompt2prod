@@ -4,6 +4,7 @@ import type { AgentStatus } from '../api';
 interface StatusChipProps {
   status: 'queued' | 'dispatched' | 'running' | 'done' | 'error' | 'canceled' | AgentStatus;
   className?: string;
+  'data-testid'?: string;
 }
 
 const runStatusConfig = {
@@ -29,7 +30,7 @@ const agentStatusConfig = {
   offline: { label: 'Offline', className: 'bg-gray-600 text-gray-100', title: 'agent is offline' },
 };
 
-export function StatusChip({ status, className = '' }: StatusChipProps) {
+export function StatusChip({ status, className = '', ...props }: StatusChipProps) {
   const config =
     runStatusConfig[status as keyof typeof runStatusConfig] ||
     agentStatusConfig[status as keyof typeof agentStatusConfig];
@@ -38,6 +39,7 @@ export function StatusChip({ status, className = '' }: StatusChipProps) {
     <span
       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.className} ${className}`}
       title={config.title}
+      {...props}
     >
       {config.label}
     </span>
