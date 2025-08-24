@@ -179,6 +179,29 @@ node packages/api/dist/index.js
 
 > **Security**: Store `GITHUB_TOKEN` in Actions secrets or local environment variables, never commit it to version control.
 
+### Operational Notes
+
+The composer worker provides internal metrics for monitoring and debugging:
+
+**Metrics counters** (logged on shutdown):
+
+- `composedTotal`: Number of successful branch/PR compositions
+- `failedTotal`: Number of failed composition attempts
+- `githubTokenMissingTotal`: Number of GitHub PR attempts without valid token
+
+**Log examples**:
+
+```
+[composer] successfully pushed feat/run-123 (files: 2) for run-123, PR: https://github.com/owner/repo/pull/456
+[composer] shutdown metrics: {"composedTotal":5,"failedTotal":1,"githubTokenMissingTotal":2}
+```
+
+**Debugging tips**:
+
+- Check `composeError` field in run records for composition failures
+- Monitor `githubTokenMissingTotal` to detect token configuration issues
+- Use `COMPOSE_PR_DRY_RUN=1` to test composition without creating branches
+
 ## Agent Registry
 
 The API maintains an in-memory registry of agents based on heartbeat messages. Agent status is computed dynamically:

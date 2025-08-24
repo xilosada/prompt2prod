@@ -18,11 +18,23 @@ type ComposeMetrics = {
   composedTotal: number;
   failedTotal: number;
   githubTokenMissingTotal: number;
+  toJSON(): { composedTotal: number; failedTotal: number; githubTokenMissingTotal: number };
 };
 
 export async function startComposer(app: FastifyInstance, bus: Bus, runsRepo: RunsRepo) {
   const st: ComposeState = { patchByRun: new Map(), composed: new Set() };
-  const metrics: ComposeMetrics = { composedTotal: 0, failedTotal: 0, githubTokenMissingTotal: 0 };
+  const metrics: ComposeMetrics = {
+    composedTotal: 0,
+    failedTotal: 0,
+    githubTokenMissingTotal: 0,
+    toJSON() {
+      return {
+        composedTotal: this.composedTotal,
+        failedTotal: this.failedTotal,
+        githubTokenMissingTotal: this.githubTokenMissingTotal,
+      };
+    },
+  };
 
   // Load policy once at boot and capture it
   let policy: ComposePolicy;
@@ -180,12 +192,7 @@ export async function startComposer(app: FastifyInstance, bus: Bus, runsRepo: Ru
 
   app.addHook('onClose', async () => {
     // Log metrics on shutdown
-    app.log.info(
-      '[composer] shutdown metrics: composed=%d failed=%d github_token_missing=%d',
-      metrics.composedTotal,
-      metrics.failedTotal,
-      metrics.githubTokenMissingTotal,
-    );
+    app.log.info('[composer] shutdown metrics: %o', metrics.toJSON());
 
     // Cleanup all run subscriptions
     for (const { status, patch } of runSubscriptions.values()) {

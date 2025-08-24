@@ -3,7 +3,7 @@ import { buildServer } from '../src/server.js';
 
 describe('health', () => {
   it('returns ok with agent registry thresholds', async () => {
-    const app = buildServer();
+    const app = await buildServer();
     const res = await app.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
     const payload = res.json();
