@@ -8,6 +8,7 @@ import { registerPrComposeRoutes } from './runs/pr.compose.routes.js';
 import { createMemoryRunsRepo } from './runs/repo.memory.js';
 import { createMemoryAgentRegistry, STATUS_THRESHOLDS } from './agents/registry.memory.js';
 import { registerAgentRoutes } from './agents/routes.js';
+import { registerAgentDevRoutes } from './agents/dev.routes.js';
 import { topics } from './bus/topics.js';
 
 export function buildServer() {
@@ -35,6 +36,12 @@ export function buildServer() {
 
   // Register agent routes immediately (they don't depend on bus)
   registerAgentRoutes(app, agentRegistry);
+
+  // Register dev-only test routes when enabled
+  if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
+    registerAgentDevRoutes(app, agentRegistry);
+    app.log.info('[dev] Test endpoints enabled');
+  }
 
   // Create the bus ONCE and register all routes that depend on it
   void createBus().then((bus) => {

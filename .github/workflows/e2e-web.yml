@@ -17,6 +17,7 @@ on:
 jobs:
   e2e-web:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -44,38 +45,39 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Start API server
+        env:
+          ENABLE_TEST_ENDPOINTS: '1'
         run: |
           node packages/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
-          sleep 5
-          echo "API server started"
+          # wait for port 3000
+          for i in {1..60}; do nc -z 127.0.0.1 3000 && break; sleep 1; done
+          (nc -z 127.0.0.1 3000 && echo "API ready") || (echo "API failed to start"; cat api.log; exit 1)
 
       - name: Start web preview server
         run: |
           pnpm --filter @prompt2prod/web preview -- --port 5173 > web.log 2>&1 &
           echo $! > web.pid
-          sleep 5
-          echo "Web server started"
+          for i in {1..60}; do nc -z 127.0.0.1 5173 && break; sleep 1; done
+          (nc -z 127.0.0.1 5173 && echo "Web ready") || (echo "Web failed"; cat web.log; exit 1)
 
       - name: Run E2E tests
-        run: |
-          WEB_BASE=http://localhost:5173 pnpm --filter @prompt2prod/web test:e2e
         env:
           WEB_BASE: http://localhost:5173
+          API_BASE: http://localhost:3000
+        run: pnpm --filter @prompt2prod/web test:e2e
 
       - name: Upload artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-failure-artifacts
+          name: e2e-artifacts
           path: |
             api.log
             web.log
-            packages/web/test-results/
-            packages/web/playwright-report/
-            packages/web/playwright/.cache/
-            packages/web/screenshots/
-            packages/web/videos/
+            packages/web/test-results/**
+            packages/web/playwright-report/**
+            packages/web/**/trace.zip
 
       - name: Cleanup servers
         if: always()
