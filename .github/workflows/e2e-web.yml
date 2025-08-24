@@ -39,7 +39,9 @@ jobs:
         run: pnpm -w build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: |
+          cd packages/web
+          npx playwright install --with-deps chromium
 
       - name: Start API server
         run: |
