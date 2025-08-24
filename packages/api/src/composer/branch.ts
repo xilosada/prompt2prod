@@ -1,12 +1,17 @@
+// Branch naming constants
+export const MAX_BRANCH_LEN = 60;
+export const MAX_SUFFIX = 1000;
+export const DEFAULT_BRANCH_NAME = 'head';
+
 export function sanitizeBranch(name: string): string {
-  // keep a-z0-9-_/ only; collapse repeats; trim to ~60 chars
+  // keep a-z0-9-_/ only; collapse repeats; trim to MAX_BRANCH_LEN chars
   const s = name
     .toLowerCase()
     .replace(/[^a-z0-9/_-]+/g, '-') // replace non-alphanumeric with dash
     .replace(/-+/g, '-') // collapse multiple dashes to single dash
     .replace(/\/+/g, '/') // collapse multiple slashes to single slash
     .replace(/^[-/]+|[-/]+$/g, ''); // trim leading/trailing dashes and slashes
-  return s.slice(0, 60) || 'head';
+  return s.slice(0, MAX_BRANCH_LEN) || DEFAULT_BRANCH_NAME;
 }
 
 export function nextBranch(
@@ -21,7 +26,7 @@ export function nextBranch(
 
     while (await exists(candidate)) {
       suffix++;
-      if (suffix > 1000) {
+      if (suffix > MAX_SUFFIX) {
         throw new Error('branch_collision_limit_exceeded');
       }
       candidate = `${base}-${suffix}`;

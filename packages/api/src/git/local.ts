@@ -94,3 +94,12 @@ export async function remoteBranchExists(remoteUrl: string, branch: string): Pro
     return false;
   }
 }
+
+export async function cleanupWorkspace(dir: string): Promise<void> {
+  try {
+    await fs.rm(dir, { recursive: true, force: true });
+  } catch (err) {
+    // Log but don't throw - cleanup failures shouldn't break the main flow
+    console.warn(`Failed to cleanup workspace ${dir}:`, err);
+  }
+}

@@ -225,11 +225,19 @@ describe('composer.worker.local', () => {
     const testFile = 'dry-run-test.txt';
     const testContent = 'Dry run test';
 
-    // Enable dry run mode
+    // Enable dry run mode BEFORE starting composer
     process.env.COMPOSE_PR_DRY_RUN = '1';
 
+    // Create a new app instance with dry run mode enabled
+    const dryRunApp = Fastify();
+    const dryRunBus = await createBus();
+    const dryRunRunsRepo = createMemoryRunsRepo();
+
+    // Start composer worker with dry run mode
+    await startComposer(dryRunApp, dryRunBus, dryRunRunsRepo);
+
     // Create a run in the repo
-    runsRepo.create({
+    dryRunRunsRepo.create({
       id: runId,
       agentId: 'test-agent',
       repo: 'test/repo',
@@ -238,7 +246,7 @@ describe('composer.worker.local', () => {
     });
 
     // Attach composer subscriptions manually
-    const attachComposer = (app as { _attachComposerRun?: (runId: string) => Promise<void> })
+    const attachComposer = (dryRunApp as { _attachComposerRun?: (runId: string) => Promise<void> })
       ._attachComposerRun;
     if (attachComposer) {
       await attachComposer(runId);
@@ -255,8 +263,8 @@ describe('composer.worker.local', () => {
     };
 
     // Publish patch and status
-    await bus.publish(topics.runPatch(runId), patch);
-    await bus.publish(topics.runStatus(runId), { state: 'done' });
+    await dryRunBus.publish(topics.runPatch(runId), patch);
+    await dryRunBus.publish(topics.runStatus(runId), { state: 'done' });
 
     // Wait for processing
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -266,7 +274,9 @@ describe('composer.worker.local', () => {
     const branchExists = await git.remoteBranchExists(remoteUrl, branchName);
     expect(branchExists).toBe(false);
 
-    // Disable dry run mode
+    // Cleanup
+    await dryRunBus.close();
+    await dryRunApp.close();
     delete process.env.COMPOSE_PR_DRY_RUN;
   }, 10000);
 });

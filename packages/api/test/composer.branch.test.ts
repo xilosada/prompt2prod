@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeBranch, nextBranch } from '../src/composer/branch.js';
+import { sanitizeBranch, nextBranch, MAX_BRANCH_LEN, MAX_SUFFIX } from '../src/composer/branch.js';
 
 describe('composer.branch', () => {
   describe('sanitizeBranch', () => {
@@ -23,8 +23,8 @@ describe('composer.branch', () => {
     it('should handle very long inputs', () => {
       const longName = 'a'.repeat(100);
       const result = sanitizeBranch(longName);
-      expect(result.length).toBeLessThanOrEqual(60);
-      expect(result).toBe('a'.repeat(60));
+      expect(result.length).toBeLessThanOrEqual(MAX_BRANCH_LEN);
+      expect(result).toBe('a'.repeat(MAX_BRANCH_LEN));
     });
 
     it('should handle empty and edge cases', () => {
@@ -69,17 +69,17 @@ describe('composer.branch', () => {
 
     it('should handle edge case with many existing branches', async () => {
       const existingBranches = new Set();
-      for (let i = 1; i <= 999; i++) {
+      for (let i = 1; i <= MAX_SUFFIX - 1; i++) {
         existingBranches.add(`feat/run-123${i > 1 ? `-${i}` : ''}`);
       }
       const exists = async (name: string) => existingBranches.has(name);
       const result = await nextBranch('feat/run-123', exists);
-      expect(result).toBe('feat/run-123-1000');
+      expect(result).toBe(`feat/run-123-${MAX_SUFFIX}`);
     });
 
     it('should throw error if too many collisions', async () => {
       const existingBranches = new Set();
-      for (let i = 1; i <= 1001; i++) {
+      for (let i = 1; i <= MAX_SUFFIX + 1; i++) {
         existingBranches.add(`feat/run-123${i > 1 ? `-${i}` : ''}`);
       }
       const exists = async (name: string) => existingBranches.has(name);
