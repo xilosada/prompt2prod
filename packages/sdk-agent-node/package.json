@@ -10,6 +10,9 @@
     "test": "vitest run",
     "example": "node ../../examples/agents/mock/index.ts"
   },
+  "dependencies": {
+    "@prompt2prod/shared": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"

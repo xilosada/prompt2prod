@@ -1,13 +1,4 @@
-import type { ApprovalPolicy, ApprovalRule } from '@prompt2prod/shared';
-
-export type ProviderVerdict = 'satisfied' | 'pending' | 'fail' | 'unsupported';
-
-export type Provider = (input: {
-  taskId: string;
-  policyRule: ApprovalRule;
-}) => Promise<ProviderVerdict>;
-
-export type ProviderRegistry = Record<string, Provider>;
+import type { ApprovalPolicy, ProviderVerdict, ProviderRegistry } from '@prompt2prod/shared';
 
 /**
  * Creates a provider registry with optional initial providers

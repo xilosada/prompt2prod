@@ -104,7 +104,8 @@ export function formatRelative(msEpoch: number): string {
 }
 
 // Approval types
-export type ApprovalVerdict = 'satisfied' | 'pending' | 'fail' | 'unsupported';
+import type { ProviderVerdict } from '@prompt2prod/shared';
+export type ApprovalVerdict = ProviderVerdict;
 export type ApprovalAggregate = 'satisfied' | 'pending' | 'fail' | 'error';
 
 export interface ApprovalRule {

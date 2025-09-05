@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import { registerApprovalRoutes } from '../src/routes/approvals.js';
 import { MemoryTaskRepo } from '../src/tasks/repo.memory.js';
-import { createProviderRegistry, type ProviderRegistry } from '../src/approvals/evaluator.js';
-import type { ApprovalPolicy } from '@prompt2prod/shared';
+import { createProviderRegistry } from '../src/approvals/evaluator.js';
+import type { ApprovalPolicy, ProviderRegistry } from '@prompt2prod/shared';
 
 describe('approvals routes', () => {
   let app: ReturnType<typeof Fastify>;

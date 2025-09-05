@@ -5,10 +5,12 @@
  * from the prompt2prod backend API.
  */
 
+import type { ProviderVerdict } from '@prompt2prod/shared';
+
 // Types matching the API response schema
 export interface ApprovalRuleResult {
   provider: string;
-  verdict: 'satisfied' | 'pending' | 'fail' | 'unsupported';
+  verdict: ProviderVerdict;
 }
 
 export interface TaskApprovalsResponse {

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { ProviderRegistry } from '../approvals/evaluator.js';
+import type { ProviderRegistry } from '@prompt2prod/shared';
 
 // In-memory stores for test seeding
 interface ManualApprovalStore {

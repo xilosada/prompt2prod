@@ -1,18 +1,14 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApprovalPolicy, Task } from '@prompt2prod/shared';
+import type { ApprovalPolicy, Task, ProviderVerdict, ProviderRegistry } from '@prompt2prod/shared';
 import { validateApprovalPolicy } from '../approvals/policy.js';
-import {
-  evaluatePolicy,
-  createProviderRegistry,
-  type ProviderRegistry,
-} from '../approvals/evaluator.js';
+import { evaluatePolicy, createProviderRegistry } from '../approvals/evaluator.js';
 import type { MemoryTaskRepo } from '../tasks/repo.memory.js';
 import { createTestProviders } from './approvals.test-utils.js';
 
 // Response DTO types
 export interface ApprovalRuleResult {
   provider: string;
-  verdict: 'satisfied' | 'pending' | 'fail' | 'unsupported';
+  verdict: ProviderVerdict;
 }
 
 export interface TaskApprovalsResponse {
