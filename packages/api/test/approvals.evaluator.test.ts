@@ -336,6 +336,34 @@ describe('approval policy evaluator', () => {
       expect(result).toBe('satisfied');
     });
 
+    it('should return error when mixing unsupported + pending + satisfied under STRICT allOf', async () => {
+      // Test case: STRICT mode with mixed verdicts including unsupported
+      // Expected: error (any unsupported in STRICT allOf mode causes error)
+      const registry = createProviderRegistry({
+        'satisfied-provider': async () => 'satisfied',
+        'pending-provider': async () => 'pending',
+        'unsupported-provider': async () => 'unsupported',
+      });
+
+      const policy: ApprovalPolicy = {
+        mode: 'allOf',
+        rules: [
+          { provider: 'satisfied-provider' },
+          { provider: 'pending-provider' },
+          { provider: 'unsupported-provider' },
+        ],
+      };
+
+      const result = await evaluatePolicy(policy, {
+        taskId: 'test-task',
+        registry,
+        strict: true,
+      });
+
+      // In STRICT allOf mode, any unsupported verdict causes error regardless of other verdicts
+      expect(result).toBe('error');
+    });
+
     it('should handle empty registry', async () => {
       const registry = createProviderRegistry();
 
