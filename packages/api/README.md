@@ -251,6 +251,41 @@ Invalid approval policies return 400 with specific error details:
 }
 ```
 
+### Approval Providers (Stubs)
+
+The API includes in-memory approval provider stubs for development and testing. These providers simulate external approval services without making network calls.
+
+**Available Providers**:
+
+- `manual`: Generic manual approval provider
+- `qa`: QA approval provider (alias to manual with id='qa')
+- `coordinator`: Coordinator approval provider (alias to manual with id='coordinator')
+- `github.checks`: GitHub checks simulator
+
+**Usage in Tests**:
+
+```typescript
+import { createDefaultProviderRegistry } from './src/approvals/providers/registry.js';
+
+// Create fresh stores for each test
+const manual = new Map<string, Set<string>>();
+const checks = new Map<string, 'success' | 'failure' | 'pending' | 'unknown'>();
+const registry = createDefaultProviderRegistry({ manual, checks });
+
+// Add approvals to stores
+manual.set('task-1', new Set(['qa', 'coordinator']));
+checks.set('task-1', 'success');
+
+// Use with evaluator
+const result = await evaluatePolicy(policy, { taskId: 'task-1', registry, strict: true });
+```
+
+**Provider Behaviors**:
+
+- **Manual**: Returns `pass` if approver ID is in store, `pending` otherwise
+- **QA/Coordinator**: Fixed approver IDs, same behavior as manual
+- **GitHub Checks**: Maps store states (`success`→`pass`, `failure`→`fail`, `pending`/`unknown`→`pending`)
+
 ### Test-only (E2E)
 
 Enable test endpoints for end-to-end testing:
