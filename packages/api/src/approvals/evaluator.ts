@@ -1,13 +1,23 @@
-import type { ApprovalPolicy, ApprovalRule } from '@prompt2prod/shared';
+import type { ApprovalPolicy, ApprovalRule, Task } from '@prompt2prod/shared';
 
+export type ApprovalVerdict = 'pass' | 'fail' | 'pending' | 'unsupported';
+
+export type ProviderFn = (args: {
+  rule: { provider: string; [k: string]: unknown };
+  task: Task;
+  env?: NodeJS.ProcessEnv;
+  // optional contextual hints; leave undefined if not available
+  pr?: { number?: number; url?: string; branch?: string } | undefined;
+}) => Promise<ApprovalVerdict> | ApprovalVerdict;
+
+export type ProviderRegistry = Record<string, ProviderFn>;
+
+// Legacy types for backward compatibility
 export type ProviderVerdict = 'satisfied' | 'pending' | 'fail' | 'unsupported';
-
 export type Provider = (input: {
   taskId: string;
   policyRule: ApprovalRule;
 }) => Promise<ProviderVerdict>;
-
-export type ProviderRegistry = Record<string, Provider>;
 
 /**
  * Creates a provider registry with optional initial providers
@@ -36,8 +46,12 @@ export async function evaluatePolicy(
     }
 
     try {
-      const verdict = await provider({ taskId, policyRule: rule });
-      verdicts.push(verdict);
+      // Create a mock task object for the new provider interface
+      const mockTask = { id: taskId } as Task;
+      const verdict = await provider({ rule, task: mockTask });
+      // Convert new verdict format to legacy format for compatibility
+      const legacyVerdict = verdict === 'pass' ? 'satisfied' : verdict;
+      verdicts.push(legacyVerdict as ProviderVerdict);
     } catch {
       // Treat provider errors as 'fail' for deterministic behavior
       verdicts.push('fail');
