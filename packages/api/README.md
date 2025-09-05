@@ -251,6 +251,77 @@ Invalid approval policies return 400 with specific error details:
 }
 ```
 
+### Approvals API
+
+Get approval status for tasks and runs:
+
+```bash
+# Get approval status for a task
+curl -s http://localhost:3000/tasks/<task-id>/approvals | jq .
+
+# Get approval status for a run (via its task)
+curl -s http://localhost:3000/runs/<run-id>/approvals | jq .
+
+# Use non-strict mode (treats unsupported providers as pending)
+curl -s http://localhost:3000/tasks/<task-id>/approvals?strict=false | jq .
+```
+
+**Response Shape**:
+
+```json
+{
+  "taskId": "task-123",
+  "strict": true,
+  "aggregate": "pending",
+  "rules": [
+    {
+      "provider": "manual",
+      "verdict": "pending"
+    },
+    {
+      "provider": "checks",
+      "verdict": "satisfied"
+    }
+  ]
+}
+```
+
+**Query Parameters**:
+
+- `strict` (optional): `true` (default) or `false` - Controls how unsupported providers are handled
+
+**Response Fields**:
+
+- `taskId`: The task identifier
+- `strict`: Whether strict mode was used for evaluation
+- `aggregate`: Overall approval status (`satisfied`, `pending`, `fail`, `error`)
+- `rules`: Array of individual rule results with provider names and verdicts
+
+**Error Responses**:
+
+- `404`: Task or run not found
+- `400`: Task has no approval policy or invalid policy structure
+
+#### GitHub Checks Provider (Feature Flag)
+
+The system includes a scaffold for a future GitHub Checks provider that would integrate with GitHub's Checks API to verify CI status. This provider is controlled by the `APPROVALS_GITHUB_CHECKS` environment variable:
+
+```bash
+# Enable GitHub Checks provider (default: off)
+APPROVALS_GITHUB_CHECKS=on node packages/api/dist/index.js
+```
+
+**Current Status**: The provider is scaffolded but not yet implemented. When enabled, it returns `unsupported` verdicts.
+
+**Future Implementation**: When fully implemented, this provider will:
+
+- Query GitHub's Checks API for CI status
+- Support configurable check names and required statuses
+- Handle authentication via `GITHUB_TOKEN`
+- Return appropriate verdicts based on CI results
+
+**Security Note**: Environment variables are automatically redacted in logs and health endpoints to prevent secret leakage.
+
 ### Test-only (E2E)
 
 Enable test endpoints for end-to-end testing:
@@ -295,6 +366,7 @@ Returns system status including agent registry configuration.
 - `AGENTS_ONLINE_MS`, `AGENTS_STALE_MS` — override status thresholds for CI
 - Bus selection (if using NATS): `BUS_DRIVER=nats`, `NATS_URL=...`
 - `ENABLE_TEST_ENDPOINTS=1` — enable test-only endpoints (dev only)
+- `APPROVALS_GITHUB_CHECKS` (default: `off`) — enable GitHub Checks provider for approvals
 
 ### Headless PR Composer
 

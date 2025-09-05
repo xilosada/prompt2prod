@@ -13,9 +13,15 @@ import { registerRunDevRoutes } from './runs/dev.routes.js';
 import { taskRoutes } from './tasks/routes.js';
 import { attachTaskOrchestrator, type TaskOrchestrator } from './tasks/orchestrator.js';
 import { coordinatorIntakeRoutes } from './coordinator/intake.routes.js';
+import {
+  registerApprovalRoutes,
+  registerApprovalRoutesWithTestProviders,
+} from './routes/approvals.js';
+import { registerApprovalTestRoutes } from './routes/approvals.test-utils.js';
 import { topics } from './bus/topics.js';
 import type { MemoryTaskRepo } from './tasks/repo.memory.js';
 import type { Bus } from './bus/Bus.js';
+import { redactEnvValue } from '@prompt2prod/shared';
 
 export async function buildServer() {
   const app = Fastify();
@@ -34,6 +40,11 @@ export async function buildServer() {
         staleTtlMs: STATUS_THRESHOLDS.STALE_TTL,
         minHeartbeatIntervalMs: parseInt(process.env.AGENT_MIN_HEARTBEAT_INTERVAL_MS ?? '250'),
       },
+    },
+    // Include configuration status (redacted for security)
+    config: {
+      busDriver: redactEnvValue(process.env.BUS_DRIVER),
+      githubChecksEnabled: process.env.APPROVALS_GITHUB_CHECKS === 'on',
     },
   }));
 
@@ -83,10 +94,25 @@ export async function buildServer() {
 
   app.register(coordinatorIntakeRoutes);
 
-  // Register dev-only run routes when enabled
+  // Register approval routes
+  if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
+    // Use test providers when test endpoints are enabled
+    await registerApprovalRoutesWithTestProviders(app, taskRepo);
+    app.log.info('[dev] Approval routes registered with test providers');
+  } else {
+    // Use default providers in normal operation
+    await registerApprovalRoutes(app, taskRepo);
+  }
+
+  // Register dev-only test routes when enabled
   if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
     registerRunDevRoutes(app, bus);
     app.log.info('[dev] Test run-status endpoints enabled');
+  }
+
+  // Register approval test seed routes (dev/test only)
+  if (process.env.ENABLE_TEST_ENDPOINTS === '1') {
+    await registerApprovalTestRoutes(app);
   }
 
   // Start the headless PR composer worker
@@ -128,6 +154,8 @@ export async function buildServer() {
   if (driver === 'memory') {
     console.log('Agent registry: Memory bus detected - manual agent subscription required');
     console.log('For production with NATS, wildcard subscriptions will be used automatically');
+    // Log bus driver configuration (redacted for security)
+    console.log(`Bus driver: ${redactEnvValue(process.env.BUS_DRIVER)}`);
   }
 
   // Expose repos for testing
