@@ -2,8 +2,7 @@ import type { Provider } from '../evaluator.js';
 import { createManualProvider, type ManualStore } from './manual.js';
 
 /**
- * Creates a Coordinator approval provider that is an alias to the manual provider
- * with a fixed approver ID of 'coordinator'.
+ * Coordinator approval provider: always uses 'coordinator' as approver → satisfied if 'coordinator' in store, pending otherwise
  */
 export function createCoordinatorProvider(store: ManualStore): Provider {
   return async ({ taskId, policyRule }) =>

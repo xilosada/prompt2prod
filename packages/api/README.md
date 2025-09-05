@@ -266,6 +266,7 @@ The API includes in-memory approval provider stubs for development and testing. 
 
 ```typescript
 import { createDefaultProviderRegistry } from './src/approvals/providers/registry.js';
+import { evaluatePolicy } from './src/approvals/evaluator.js';
 
 // Create fresh stores for each test
 const manual = new Map<string, Set<string>>();
@@ -277,7 +278,9 @@ manual.set('task-1', new Set(['qa', 'coordinator']));
 checks.set('task-1', 'success');
 
 // Use with evaluator
+const policy = { mode: 'allOf' as const, rules: [{ provider: 'qa' }] };
 const result = await evaluatePolicy(policy, { taskId: 'task-1', registry, strict: true });
+// result: 'satisfied' | 'pending' | 'error'
 ```
 
 **Provider Behaviors**:

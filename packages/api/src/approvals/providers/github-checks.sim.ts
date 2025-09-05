@@ -4,13 +4,7 @@ export type ChecksState = 'success' | 'failure' | 'pending' | 'unknown';
 export type ChecksStore = Map<string /*taskId*/, ChecksState>;
 
 /**
- * Creates a GitHub checks simulator provider that uses an in-memory store
- * to simulate GitHub check statuses.
- *
- * Provider behavior:
- * - If there's **no PR info** in `args.pr` **and** no store entry → **unsupported**
- * - Map states: `success` → **satisfied**, `failure` → **fail**, `pending`/`unknown` → **pending**
- * - Allow overriding by rule param `require?: 'success' | 'none'` (default `'success'`; `'none'` is always `satisfied`)
+ * GitHub checks simulator: store state → success=satisfied, failure=fail, pending/unknown=pending, missing=unsupported
  */
 export function createGithubChecksSim(store: ChecksStore): Provider {
   return async ({ taskId, policyRule }) => {

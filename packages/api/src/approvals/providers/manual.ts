@@ -3,14 +3,7 @@ import type { Provider } from '../evaluator.js';
 export type ManualStore = Map<string /*taskId*/, Set<string /*approverId*/>>;
 
 /**
- * Creates a manual approval provider that uses an in-memory store
- * to track which approvers have approved which tasks.
- *
- * Provider behavior:
- * - Read `rule.id` as the required approver (string)
- * - **satisfied** if `store` has `taskId` and includes `rule.id`
- * - **pending** if not present
- * - **unsupported** if `rule.id` is not a non-empty string
+ * Manual approval provider: rule.id (string) → satisfied if in store, pending if missing, unsupported if invalid
  */
 export function createManualProvider(store: ManualStore): Provider {
   return async ({ taskId, policyRule }) => {
