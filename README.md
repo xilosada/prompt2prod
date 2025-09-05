@@ -125,7 +125,7 @@ The system includes a flexible approval system that allows tasks to require manu
 
 **STRICT Mode** (default):
 
-- `unsupported` providers cause `fail` status
+- `unsupported` providers cause `error` status
 - Missing providers are treated as errors
 - Ensures all configured approvals are available
 
