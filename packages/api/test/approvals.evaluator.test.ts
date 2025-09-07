@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { evaluatePolicy, createProviderRegistry } from '../src/approvals/evaluator.js';
-import type {
-  ApprovalPolicy,
-  ProviderVerdict,
-  Provider,
-  ProviderRegistry,
-} from '@prompt2prod/shared';
+import {
+  evaluatePolicy,
+  createProviderRegistry,
+  type ProviderVerdict,
+  type Provider,
+  type ProviderRegistry,
+  type ProviderFn,
+} from '../src/approvals/evaluator.js';
+import type { ApprovalPolicy } from '@prompt2prod/shared';
 
 describe('approval policy evaluator', () => {
   describe('createProviderRegistry', () => {
@@ -256,13 +258,13 @@ describe('approval policy evaluator', () => {
 
   describe('provider integration', () => {
     it('should pass correct parameters to providers', async () => {
-      let receivedTaskId: string | undefined;
+      let receivedTask: { id: string } | undefined;
       let receivedRule: Record<string, unknown> | undefined;
 
-      const mockProvider: Provider = async ({ taskId, policyRule }) => {
-        receivedTaskId = taskId;
-        receivedRule = policyRule;
-        return 'satisfied';
+      const mockProvider: ProviderFn = async ({ rule, task }) => {
+        receivedTask = task;
+        receivedRule = rule;
+        return 'pass';
       };
 
       const registry = createProviderRegistry({
@@ -280,7 +282,7 @@ describe('approval policy evaluator', () => {
         strict: true,
       });
 
-      expect(receivedTaskId).toBe('test-task-123');
+      expect(receivedTask.id).toBe('test-task-123');
       expect(receivedRule).toEqual({
         provider: 'test-provider',
         customField: 'customValue',

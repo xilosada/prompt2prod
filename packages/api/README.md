@@ -302,6 +302,44 @@ curl -s http://localhost:3000/tasks/<task-id>/approvals?strict=false | jq .
 - `404`: Task or run not found
 - `400`: Task has no approval policy or invalid policy structure
 
+### Approval Providers (Stubs)
+
+The API includes in-memory approval provider stubs for development and testing. These providers simulate external approval services without making network calls.
+
+**Available Providers**:
+
+- `manual`: Generic manual approval provider
+- `qa`: QA approval provider (alias to manual with id='qa')
+- `coordinator`: Coordinator approval provider (alias to manual with id='coordinator')
+- `github.checks`: GitHub checks simulator
+
+**Usage in Tests**:
+
+```typescript
+import { createDefaultProviderRegistry } from './src/approvals/providers/registry.js';
+import { evaluatePolicy } from './src/approvals/evaluator.js';
+
+// Create fresh stores for each test
+const manual = new Map<string, Set<string>>();
+const checks = new Map<string, 'success' | 'failure' | 'pending' | 'unknown'>();
+const registry = createDefaultProviderRegistry({ manual, checks });
+
+// Add approvals to stores
+manual.set('task-1', new Set(['qa', 'coordinator']));
+checks.set('task-1', 'success');
+
+// Use with evaluator
+const policy = { mode: 'allOf' as const, rules: [{ provider: 'qa' }] };
+const result = await evaluatePolicy(policy, { taskId: 'task-1', registry, strict: true });
+// result: 'satisfied' | 'pending' | 'error'
+```
+
+**Provider Behaviors**:
+
+- **Manual**: Returns `pass` if approver ID is in store, `pending` otherwise
+- **QA/Coordinator**: Fixed approver IDs, same behavior as manual
+- **GitHub Checks**: Maps store states (`success`→`pass`, `failure`→`fail`, `pending`/`unknown`→`pending`)
+
 #### GitHub Checks Provider (Feature Flag)
 
 The system includes a scaffold for a future GitHub Checks provider that would integrate with GitHub's Checks API to verify CI status. This provider is controlled by the `APPROVALS_GITHUB_CHECKS` environment variable:
