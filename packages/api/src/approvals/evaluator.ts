@@ -67,6 +67,44 @@ export async function evaluatePolicy(
 }
 
 /**
+ * New evaluatePolicy function that works with the new provider system
+ */
+export async function evaluatePolicyWithTask(
+  policy: ApprovalPolicy,
+  task: Task,
+  registry: ProviderRegistry,
+  strict: boolean = true,
+): Promise<'satisfied' | 'pending' | 'error'> {
+  const verdicts: ProviderVerdict[] = [];
+
+  // Evaluate each rule
+  for (const rule of policy.rules) {
+    const provider = registry[rule.provider];
+    if (!provider) {
+      verdicts.push('unsupported');
+      continue;
+    }
+
+    try {
+      const verdict = await provider({ rule, task });
+      // Convert new verdict format to legacy format for compatibility
+      const legacyVerdict = verdict === 'pass' ? 'satisfied' : verdict;
+      verdicts.push(legacyVerdict as ProviderVerdict);
+    } catch {
+      // Treat provider errors as 'fail' for deterministic behavior
+      verdicts.push('fail');
+    }
+  }
+
+  // Apply STRICT aggregation logic
+  if (policy.mode === 'allOf') {
+    return evaluateAllOf(verdicts, strict);
+  } else {
+    return evaluateAnyOf(verdicts, strict);
+  }
+}
+
+/**
  * Evaluates allOf mode with STRICT semantics
  */
 function evaluateAllOf(

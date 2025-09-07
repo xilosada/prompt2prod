@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { ProviderRegistry } from '@prompt2prod/shared';
+import type { ProviderRegistry } from '../approvals/evaluator.js';
 
 // In-memory stores for test seeding
 interface ManualApprovalStore {
@@ -22,8 +22,10 @@ const checksStore: ChecksStore = {};
 export function createTestProviders(): ProviderRegistry {
   return {
     // Manual approval provider - checks the test store
-    manual: async ({ taskId }) => {
-      const approvals = manualApprovalStore[taskId];
+    manual: async ({ rule, task }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _ = { rule }; // Acknowledge parameter for future use
+      const approvals = manualApprovalStore[task.id];
       if (!approvals) {
         return 'pending'; // No approvals recorded yet
       }
@@ -31,7 +33,7 @@ export function createTestProviders(): ProviderRegistry {
       // Check if any approver has approved
       const hasApproval = Object.values(approvals).some((approved) => approved);
       if (hasApproval) {
-        return 'satisfied';
+        return 'pass';
       }
 
       // Check if any approver has rejected
@@ -44,15 +46,17 @@ export function createTestProviders(): ProviderRegistry {
     },
 
     // Checks provider - uses the test store
-    checks: async ({ taskId }) => {
-      const state = checksStore[taskId];
+    checks: async ({ rule, task }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _ = { rule }; // Acknowledge parameter for future use
+      const state = checksStore[task.id];
       if (!state) {
         return 'pending'; // No state recorded yet
       }
 
       switch (state) {
         case 'success':
-          return 'satisfied';
+          return 'pass';
         case 'failure':
           return 'fail';
         case 'pending':
