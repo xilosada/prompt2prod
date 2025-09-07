@@ -1,7 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApprovalPolicy, Task, ProviderVerdict, ProviderRegistry } from '@prompt2prod/shared';
+import type { ApprovalPolicy, Task, ProviderVerdict } from '@prompt2prod/shared';
 import { validateApprovalPolicy } from '../approvals/policy.js';
-import { evaluatePolicy, createProviderRegistry } from '../approvals/evaluator.js';
+import {
+  evaluatePolicyWithTask,
+  createProviderRegistry,
+  type ProviderRegistry,
+} from '../approvals/evaluator.js';
 import type { MemoryTaskRepo } from '../tasks/repo.memory.js';
 import { createTestProviders } from './approvals.test-utils.js';
 
@@ -22,21 +26,21 @@ export interface TaskApprovalsResponse {
 const createDefaultProviders = (): ProviderRegistry => {
   return createProviderRegistry({
     // Manual approval provider - always returns pending for MVP
-    manual: async ({ taskId, policyRule }) => {
+    manual: async ({ rule, task }): Promise<'pending'> => {
       // In a real implementation, this would check a database for manual approvals
       // For MVP, we'll return pending to indicate manual approval is required
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _ = { taskId, policyRule }; // Acknowledge parameters for future use
+      const _ = { rule, task }; // Acknowledge parameters for future use
       return 'pending';
     },
 
     // Checks provider - simulates CI checks
-    checks: async ({ taskId, policyRule }) => {
+    checks: async ({ rule, task }): Promise<'pass'> => {
       // In a real implementation, this would check CI status
-      // For MVP, we'll return satisfied to simulate passing checks
+      // For MVP, we'll return pass to simulate passing checks
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _ = { taskId, policyRule }; // Acknowledge parameters for future use
-      return 'satisfied';
+      const _ = { rule, task }; // Acknowledge parameters for future use
+      return 'pass';
     },
   });
 };
@@ -158,7 +162,9 @@ export async function registerApprovalRoutes(
           verdict = 'unsupported';
         } else {
           try {
-            verdict = await provider({ taskId, policyRule: rule });
+            const newVerdict = await provider({ rule, task });
+            // Convert new verdict format to legacy format for response
+            verdict = newVerdict === 'pass' ? 'satisfied' : newVerdict;
           } catch {
             // Treat provider errors as 'fail' for deterministic behavior
             verdict = 'fail';
@@ -172,11 +178,7 @@ export async function registerApprovalRoutes(
       }
 
       // Get the aggregate result using the evaluator
-      const aggregate = await evaluatePolicy(policy, {
-        taskId,
-        registry,
-        strict,
-      });
+      const aggregate = await evaluatePolicyWithTask(policy, task, registry, strict);
 
       // Map 'error' to 'fail' for the response (as per requirements)
       const responseAggregate = aggregate === 'error' ? 'fail' : aggregate;
@@ -293,7 +295,9 @@ export async function registerApprovalRoutes(
           verdict = 'unsupported';
         } else {
           try {
-            verdict = await provider({ taskId: task.id, policyRule: rule });
+            const newVerdict = await provider({ rule, task });
+            // Convert new verdict format to legacy format for response
+            verdict = newVerdict === 'pass' ? 'satisfied' : newVerdict;
           } catch {
             // Treat provider errors as 'fail' for deterministic behavior
             verdict = 'fail';
@@ -307,11 +311,7 @@ export async function registerApprovalRoutes(
       }
 
       // Get the aggregate result using the evaluator
-      const aggregate = await evaluatePolicy(policy, {
-        taskId: task.id,
-        registry,
-        strict,
-      });
+      const aggregate = await evaluatePolicyWithTask(policy, task, registry, strict);
 
       // Map 'error' to 'fail' for the response (as per requirements)
       const responseAggregate = aggregate === 'error' ? 'fail' : aggregate;
