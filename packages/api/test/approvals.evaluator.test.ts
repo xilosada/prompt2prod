@@ -337,6 +337,124 @@ describe('approval policy evaluator', () => {
       expect(result).toBe('satisfied');
     });
 
+    it('should return error when mixing unsupported + pending + satisfied under STRICT allOf', async () => {
+      // Test case: STRICT mode with mixed verdicts including unsupported
+      // Expected: error (any unsupported in STRICT allOf mode causes error)
+      const registry = createProviderRegistry({
+        'satisfied-provider': async () => 'satisfied',
+        'pending-provider': async () => 'pending',
+        'unsupported-provider': async () => 'unsupported',
+      });
+
+      const policy: ApprovalPolicy = {
+        mode: 'allOf',
+        rules: [
+          { provider: 'satisfied-provider' },
+          { provider: 'pending-provider' },
+          { provider: 'unsupported-provider' },
+        ],
+      };
+
+      const result = await evaluatePolicy(policy, {
+        taskId: 'test-task',
+        registry,
+        strict: true,
+      });
+
+      // In STRICT allOf mode, any unsupported verdict causes error regardless of other verdicts
+      expect(result).toBe('error');
+    });
+
+    it('should handle table-driven STRICT test cases for unsupported + pending combinations', async () => {
+      // Table-driven test to lock in aggregate behavior for various combinations
+      const testCases = [
+        {
+          name: 'allOf STRICT: satisfied + pending + unsupported → error',
+          mode: 'allOf' as const,
+          strict: true,
+          verdicts: ['satisfied', 'pending', 'unsupported'],
+          expected: 'error',
+        },
+        {
+          name: 'allOf STRICT: pending + unsupported → error',
+          mode: 'allOf' as const,
+          strict: true,
+          verdicts: ['pending', 'unsupported'],
+          expected: 'error',
+        },
+        {
+          name: 'allOf STRICT: satisfied + unsupported → error',
+          mode: 'allOf' as const,
+          strict: true,
+          verdicts: ['satisfied', 'unsupported'],
+          expected: 'error',
+        },
+        {
+          name: 'allOf non-STRICT: satisfied + pending + unsupported → pending',
+          mode: 'allOf' as const,
+          strict: false,
+          verdicts: ['satisfied', 'pending', 'unsupported'],
+          expected: 'pending',
+        },
+        {
+          name: 'anyOf STRICT: satisfied + pending + unsupported → satisfied',
+          mode: 'anyOf' as const,
+          strict: true,
+          verdicts: ['satisfied', 'pending', 'unsupported'],
+          expected: 'satisfied',
+        },
+        {
+          name: 'anyOf STRICT: pending + unsupported → pending',
+          mode: 'anyOf' as const,
+          strict: true,
+          verdicts: ['pending', 'unsupported'],
+          expected: 'pending',
+        },
+        {
+          name: 'anyOf STRICT: unsupported only → error',
+          mode: 'anyOf' as const,
+          strict: true,
+          verdicts: ['unsupported'],
+          expected: 'error',
+        },
+        {
+          name: 'anyOf non-STRICT: unsupported only → pending',
+          mode: 'anyOf' as const,
+          strict: false,
+          verdicts: ['unsupported'],
+          expected: 'pending',
+        },
+      ];
+
+      for (const testCase of testCases) {
+        // Create registry with providers that return the specified verdicts
+        const registry = createProviderRegistry(
+          testCase.verdicts.reduce(
+            (acc, verdict, index) => {
+              acc[`provider-${index}`] = async () => verdict as ProviderVerdict;
+              return acc;
+            },
+            {} as Record<string, Provider>,
+          ),
+        );
+
+        const policy: ApprovalPolicy = {
+          mode: testCase.mode,
+          rules: testCase.verdicts.map((_, index) => ({
+            provider: `provider-${index}`,
+          })),
+        };
+
+        const result = await evaluatePolicy(policy, {
+          taskId: 'test-task',
+          registry,
+          strict: testCase.strict,
+        });
+
+        expect(result).toBe(testCase.expected);
+      }
+    });
+
     it('should handle empty registry', async () => {
       const registry = createProviderRegistry();
 

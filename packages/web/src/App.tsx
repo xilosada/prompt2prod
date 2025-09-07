@@ -14,6 +14,7 @@ import { RunCreateForm } from './components/RunCreateForm';
 import { StatusChip } from './components/StatusChip';
 import { RunStatusChip } from './components/RunStatusChip';
 import { AgentsPanel } from './components/AgentsPanel';
+import { ApprovalsCard } from './components/ApprovalsCard';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
 
@@ -250,6 +251,9 @@ export function App() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Approvals */}
+                    <ApprovalsCard runId={selectedRun.id} />
 
                     {/* Logs */}
                     <RunLogs

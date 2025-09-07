@@ -97,6 +97,55 @@ curl -s -X POST http://localhost:3000/runs/demo/pr/compose \
 
 > **Security**: Store `GITHUB_TOKEN` in Actions secrets or local environment variables, never commit it to version control. The token requires **repo** scope (for both public and private repositories).
 
+## Approvals (Overview)
+
+The system includes a flexible approval system that allows tasks to require manual or automated approvals before execution. Approval policies are defined at task creation and evaluated through configurable providers.
+
+### Providers
+
+**Manual Approval** (`manual`):
+
+- Requires human intervention to approve tasks
+- Returns `pending` status until manually approved
+- Used for high-risk or sensitive changes
+
+**QA/Coordinator** (`qa`, `coordinator`):
+
+- Automated quality assurance checks
+- Can be configured for different validation levels
+- Returns `satisfied` when checks pass
+
+**Checks Simulation** (`checks`):
+
+- Simulates CI/CD pipeline checks
+- Returns `satisfied` by default for MVP
+- Can be extended to integrate with real CI systems
+
+### STRICT vs Non-STRICT Behavior
+
+**STRICT Mode** (default):
+
+- `unsupported` providers cause `error` status
+- Missing providers are treated as errors
+- Ensures all configured approvals are available
+
+**Non-STRICT Mode** (`?strict=false`):
+
+- `unsupported` providers are treated as `pending`
+- Allows graceful degradation when providers are unavailable
+- Useful for development and testing environments
+
+### Web UI Display
+
+The web interface shows approval status through:
+
+- **Aggregate Badge**: Overall status (`satisfied`/`pending`/`fail`/`error`) with color coding
+- **Individual Rules**: List of each provider with its verdict
+- **Strict Mode Indicator**: Shows when all rules must be satisfied
+- **Real-time Updates**: Status refreshes automatically as approvals change
+
+See the [API documentation](./packages/api/README.md#approvals-api) for endpoint details and examples.
+
 ## CI Overview
 
 - **Orchestrator E2E**: Tests the complete workflow from run creation to PR composition

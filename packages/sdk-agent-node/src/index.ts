@@ -104,3 +104,11 @@ export { topics };
 // Re-export transport factories for convenience
 export { createMemoryTransport } from './transports/memory.js';
 export { createNatsTransport } from './transports/nats.js';
+
+// Re-export approvals API client
+export { getApprovals } from './approvals.js';
+export type {
+  TaskApprovalsResponse,
+  ApprovalRuleResult,
+  GetApprovalsOptions,
+} from './approvals.js';

@@ -24,6 +24,16 @@ export type ApprovalPolicy = {
   rules: ApprovalRule[]; // 1..16 rules
 };
 
+// Approval provider types
+export type ProviderVerdict = 'satisfied' | 'pending' | 'fail' | 'unsupported';
+
+export type Provider = (input: {
+  taskId: string;
+  policyRule: ApprovalRule;
+}) => Promise<ProviderVerdict>;
+
+export type ProviderRegistry = Record<string, Provider>;
+
 // Task types
 export type TaskState =
   | 'planned'

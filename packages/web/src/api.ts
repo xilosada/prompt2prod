@@ -102,3 +102,32 @@ export function formatRelative(msEpoch: number): string {
   const h = Math.floor(m / 60);
   return `${h}h ago`;
 }
+
+// Approval types
+import type { ProviderVerdict } from '@prompt2prod/shared';
+export type ApprovalVerdict = ProviderVerdict;
+export type ApprovalAggregate = 'satisfied' | 'pending' | 'fail' | 'error';
+
+export interface ApprovalRule {
+  provider: string;
+  verdict: ApprovalVerdict;
+}
+
+export interface TaskApprovals {
+  taskId: string;
+  strict: boolean;
+  aggregate: ApprovalAggregate;
+  rules: ApprovalRule[];
+}
+
+export async function getRunApprovals(runId: string, signal?: AbortSignal): Promise<TaskApprovals> {
+  const response = await fetch(`${API_BASE}/runs/${encodeURIComponent(runId)}/approvals`, {
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get run approvals: ${response.statusText}`);
+  }
+
+  return response.json();
+}
