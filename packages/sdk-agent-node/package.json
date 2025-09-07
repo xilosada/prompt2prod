@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "pnpm --filter @prompt2prod/shared build && tsc -p tsconfig.json",
+    "typecheck": "pnpm --filter @prompt2prod/shared build && tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "example": "node ../../examples/agents/mock/index.ts"
   },
